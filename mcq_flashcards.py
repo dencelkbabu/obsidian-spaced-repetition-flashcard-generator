@@ -15,10 +15,12 @@ from datetime import datetime
 from functools import wraps
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Any
+import os
 
 import requests
 import yaml
 from tqdm import tqdm
+import ctypes # For Windows Sleep Prevention
 
 # --- CONFIGURATION & CONSTANTS ---
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -78,6 +80,27 @@ class ProcessingStats:
     processed_concepts: int = 0
     refine_attempts: int = 0
     refine_success: int = 0
+
+# --- SYSTEM POWER MANAGEMENT ---
+
+class WindowsInhibitor:
+    '''Prevent OS sleep/hibernate on Windows.'''
+    ES_CONTINUOUS = 0x80000000
+    ES_SYSTEM_REQUIRED = 0x00000001
+
+    def __init__(self):
+        pass
+
+    def inhibit(self):
+        print("   (preventing sleep)")
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            self.ES_CONTINUOUS | self.ES_SYSTEM_REQUIRED
+        )
+
+    def uninhibit(self):
+        ctypes.windll.kernel32.SetThreadExecutionState(
+            self.ES_CONTINUOUS
+        )
 
 # --- AUTO TUNER ---
 
@@ -611,7 +634,17 @@ def main():
     # Run
     cfg = Config()
     gen = FlashcardGenerator(subj, cfg)
-    gen.run(week)
+    
+    os_inhibitor = None
+    if os.name == 'nt':
+        os_inhibitor = WindowsInhibitor()
+        os_inhibitor.inhibit()
+        
+    try:
+        gen.run(week)
+    finally:
+        if os_inhibitor:
+            os_inhibitor.uninhibit()
 
 if __name__ == "__main__":
     main()
