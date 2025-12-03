@@ -15,3 +15,7 @@ _cache/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs & Debug
+_errors/
+_raw_responses/
