@@ -474,25 +474,19 @@ class FlashcardGenerator:
         except Exception:
             return None, set()
 
-    def run(self, target_week: Optional[int], limit: int = 0):
-        if not self.client.check_connection():
-            print("❌ Ollama not reachable. Start with 'ollama serve'.")
-            return
-
-        # Setup Output
-        if target_week:
-            out_name = f"{self.subject}_W{target_week:02d}_MCQ.md"
-            tag = f"W{target_week:02d}"
-        else:
-            out_name = f"{self.subject}_All_Weeks_MCQ.md"
-            tag = "All_Weeks"
-            
+    def process_week(self, week: int, files: List[Path], limit: int):
+        # Reset Stats for this week
+        self.stats = ProcessingStats()
+        
+        out_name = f"{self.subject}_W{week:02d}_MCQ.md"
+        tag = f"W{week:02d}"
         out_path = OUTPUT_DIR / out_name
         
         # Interactive Overwrite Check
         if out_path.exists():
-            if input(f"⚠️  {out_name} exists. Overwrite? (y/n): ").lower() != 'y':
-                print("Aborted.")
+            print(f"\n⚠️  {out_name} exists.")
+            if input("   Overwrite? (y/n): ").lower() != 'y':
+                print("   Skipping...")
                 return
 
         # Write Header
@@ -500,38 +494,18 @@ class FlashcardGenerator:
             f.write(f"---\ntags:\n- flashcard/{self.subject}/{tag}\n---\n")
             f.write(f"## MCQs: {self.subject} - {tag}\n\n")
 
-        # Collect Jobs
-        files_map = {}
-        concepts_set = set()
+        self.stats.total_files = len(files)
         
-        target_dirs = [self.subject_path / d for d in ["Recorded Lectures", "Live Lectures"] if (self.subject_path / d).exists()]
-        
-        print(f"\n🔍 Scanning {self.subject}...")
-        for d in target_dirs:
-            for p in d.rglob("*.md"):
-                match = re.search(r'(?:W|Week)\s?0?(\d+)', p.name, re.IGNORECASE)
-                if match:
-                    wk = int(match.group(1))
-                    if target_week and wk != target_week: continue
-                    if not target_week and not (self.config.start_week <= wk <= self.config.end_week): continue
-                    files_map[p] = p.name
-
-        self.stats.total_files = len(files_map)
-        if self.stats.total_files == 0:
-            print("❌ No files found.")
-            return
-
         # Prepare Lecture Jobs
         lecture_jobs = []
-        items = list(files_map.items())
-        if limit > 0: items = items[:limit]
+        concepts_set = set()
         
-        print("📝 Extracting content...")
-        for p, name in tqdm(items):
+        print(f"\n📝 Extracting content for Week {week}...")
+        for p in tqdm(files):
             summary, links = self.extract_summary(p)
             concepts_set.update(links)
             if summary:
-                lecture_jobs.append((summary, name, False))
+                lecture_jobs.append((summary, p.name, False))
 
         # Prepare Concept Jobs
         concept_jobs = []
@@ -547,8 +521,7 @@ class FlashcardGenerator:
 
         # Execute
         all_jobs = lecture_jobs + concept_jobs
-        print(f"\n🚀 Processing {len(all_jobs)} items with {self.config.workers} workers...")
-        print(f"   (AutoTuner Active: Monitoring GPU & Errors)")
+        print(f"🚀 Processing {len(all_jobs)} items with {self.config.workers} workers...")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.workers) as executor:
             futures = [executor.submit(self.process_item, job) for job in all_jobs]
@@ -560,14 +533,51 @@ class FlashcardGenerator:
                         with open(out_path, 'a', encoding='utf-8') as f:
                             f.write(result)
 
-        # Final Report
-        print(f"\n🎉 DONE! Output: {out_name}")
-        print(f"📊 Statistics:")
+        # Final Report for Week
+        print(f"🎉 DONE! Output: {out_name}")
+        print(f"📊 Statistics for Week {week}:")
         print(f"   Files: {self.stats.processed_files}/{self.stats.total_files}")
         print(f"   Concepts: {self.stats.processed_concepts}/{self.stats.total_concepts}")
         print(f"   Success: {self.stats.successful_cards} | Failed: {self.stats.failed_cards}")
         print(f"   Cache Hits: {self.stats.cache_hits}")
         print(f"   Self-Corrections: {self.stats.refine_success}/{self.stats.refine_attempts}")
+
+    def run(self, target_week: Optional[int], limit: int = 0):
+        if not self.client.check_connection():
+            print("❌ Ollama not reachable. Start with 'ollama serve'.")
+            return
+
+        # 1. Scan and Group Files by Week
+        week_files: Dict[int, List[Path]] = {}
+        target_dirs = [self.subject_path / d for d in ["Recorded Lectures", "Live Lectures"] if (self.subject_path / d).exists()]
+        
+        print(f"\n🔍 Scanning {self.subject}...")
+        for d in target_dirs:
+            for p in d.rglob("*.md"):
+                match = re.search(r'(?:W|Week)\s?0?(\d+)', p.name, re.IGNORECASE)
+                if match:
+                    wk = int(match.group(1))
+                    
+                    # Filter if specific week requested
+                    if target_week and wk != target_week: continue
+                    
+                    # Filter by config range
+                    if not target_week and not (self.config.start_week <= wk <= self.config.end_week): continue
+                    
+                    if wk not in week_files: week_files[wk] = []
+                    week_files[wk].append(p)
+
+        if not week_files:
+            print("❌ No files found.")
+            return
+
+        # 2. Process Each Week
+        sorted_weeks = sorted(week_files.keys())
+        print(f"📅 Found weeks: {', '.join(map(str, sorted_weeks))}")
+        print(f"   (AutoTuner Active: Monitoring GPU & Errors)")
+        
+        for wk in sorted_weeks:
+            self.process_week(wk, week_files[wk], limit)
 
 # --- CLI ENTRY POINT ---
 
