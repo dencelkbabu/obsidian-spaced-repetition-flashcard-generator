@@ -13,6 +13,8 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
 *   **🔗 Context-Aware:** Intelligently scans your lecture notes and follows `[[wikilinks]]` to generate concept-specific cards.
 *   **🛠️ Robust & Portable:** Features automatic retries, error handling, and works on any OS (Windows/Mac/Linux) with relative path configuration.
 *   **📝 Obsidian Ready:** Outputs clean Markdown formatted strictly for the Spaced Repetition plugin.
+*   **🚀 AutoTuner (v2.0):** Dynamically monitors your GPU (Nvidia) and error rates to optimize performance and prevent overheating.
+*   **🔄 Self-Correction (v2.0):** Automatically detects invalid outputs and prompts the AI to fix them, ensuring high success rates.
 
 ## 🚀 Prerequisites
 
