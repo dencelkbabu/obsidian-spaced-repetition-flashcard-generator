@@ -491,8 +491,11 @@ class FlashcardGenerator:
             
             if not summary: summary = self.cleaner.clean_wikilinks(content)
             
-            links = re.findall(r'\[\[(?:[^|\]]*\|)?([^\]]+)\]\]', content)
-            cleaned_links = {link.split('|')[0] for link in links}
+            # Regex to capture the filename part of a wikilink
+            # Matches [[Filename]] or [[Filename|Alias]] or [[Filename#Anchor]]
+            # Group 1 is the Filename
+            links = re.findall(r'\[\[([^|#\]]+)(?:[|#][^\]]+)?\]\]', content)
+            cleaned_links = {link.strip() for link in links}
             return summary, cleaned_links
         except Exception:
             return None, set()
