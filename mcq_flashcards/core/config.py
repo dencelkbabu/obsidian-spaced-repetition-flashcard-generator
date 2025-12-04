@@ -75,6 +75,7 @@ class Config:
     start_week: int = 1
     end_week: int = 12
     semester: str = DEFAULT_SEMESTER
+    dev_mode: bool = False
 
 
 @dataclass

@@ -4,46 +4,99 @@ This module provides the main() function that handles user interaction
 and orchestrates the flashcard generation process.
 """
 
+import argparse
 import os
+import sys
+from pathlib import Path
+from typing import List, Optional
 
 import requests
 
 from mcq_flashcards import __version__
-from mcq_flashcards.core.config import Config, BCOM_ROOT, DEFAULT_SEMESTER, get_semester_paths
+from mcq_flashcards.core.config import (
+    Config, 
+    BCOM_ROOT, 
+    DEFAULT_SEMESTER, 
+    get_semester_paths,
+    CACHE_DIR
+)
 from mcq_flashcards.core.generator import FlashcardGenerator
 from mcq_flashcards.utils.power import WindowsInhibitor
+from mcq_flashcards.utils.postprocessor import post_process_flashcards
 
 
-def main():
-    """Main CLI entry point for flashcard generation."""
-    print(f"⚡ Flashcard Generator v{__version__}")
-    
-    # Check Ollama First
+def check_ollama() -> bool:
+    """Check if Ollama is running."""
     try:
         requests.get("http://localhost:11434", timeout=1)
+        return True
     except:
         print("❌ Error: Ollama is not running.")
+        return False
+
+
+def clear_cache(subject: str) -> None:
+    """Clear cache files for the specified subject or all subjects.
+    
+    Args:
+        subject: Subject code or "ALL"
+    """
+    if not CACHE_DIR.exists():
+        return
+
+    files_to_delete = []
+    if subject == "ALL":
+        files_to_delete = list(CACHE_DIR.glob("*.pkl"))
+        print(f"\n🧹 Clearing entire cache directory...")
+    else:
+        files_to_delete = list(CACHE_DIR.glob(f"{subject}_*.pkl"))
+        print(f"\n🧹 Clearing cache for {subject}...")
+
+    if not files_to_delete:
+        print("   → No cache files found.")
+        return
+
+    count = 0
+    for f in files_to_delete:
+        try:
+            f.unlink()
+            count += 1
+        except Exception as e:
+            print(f"   ⚠️ Failed to delete {f.name}: {e}")
+
+    print(f"   → Cleared {count} cache files")
+
+
+def get_semesters() -> List[str]:
+    """Get list of available semesters."""
+    try:
+        return [d.name for d in BCOM_ROOT.iterdir() 
+                if d.is_dir() and d.name.startswith("Semester")]
+    except Exception:
+        return []
+
+
+def run_interactive():
+    """Run in interactive production mode."""
+    print(f"⚡ Flashcard Generator v{__version__}")
+    
+    if not check_ollama():
         return
 
     # Semester Selection
-    print(f"\n📚 Available Semesters:")
-    try:
-        semesters = [d.name for d in BCOM_ROOT.iterdir() 
-                     if d.is_dir() and d.name.startswith("Semester")]
-        if not semesters:
-            print("❌ No semesters found.")
-            return
-        
-        for i, sem in enumerate(semesters, 1):
-            print(f"  {i}. {sem}")
-    except Exception:
-        print("❌ Error reading semesters.")
+    semesters = get_semesters()
+    if not semesters:
+        print("❌ No semesters found.")
         return
+
+    print(f"\n📚 Available Semesters:")
+    for i, sem in enumerate(semesters, 1):
+        print(f"  {i}. {sem}")
     
     sem_input = input("\n📚 Select Semester (number or name, or Enter for default): ").strip()
     
+    semester = DEFAULT_SEMESTER
     if not sem_input:
-        semester = DEFAULT_SEMESTER
         print(f"   → Using default: {semester}")
     elif sem_input.isdigit():
         idx = int(sem_input) - 1
@@ -53,7 +106,6 @@ def main():
             print("❌ Invalid semester number.")
             return
     else:
-        # Try to match by name
         matches = [s for s in semesters if sem_input.lower() in s.lower()]
         if len(matches) == 1:
             semester = matches[0]
@@ -61,13 +113,10 @@ def main():
             print("❌ Invalid semester name.")
             return
     
-    # Get semester-specific paths
     class_root, output_dir = get_semester_paths(semester)
-    
-    # Ensure output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Interactive Inputs
+    # Subject Selection
     print(f"\n📂 Available Subjects in {semester}:")
     try:
         all_subjects = [d.name for d in class_root.iterdir() if d.is_dir()]
@@ -78,13 +127,12 @@ def main():
 
     subj_input = input("\n🎯 Enter Subject Code (or press Enter for ALL): ").strip().upper()
     
-    # Default to ALL if empty
+    target_subjects = []
     if not subj_input:
         subj_input = "ALL"
         print("   → Processing ALL subjects")
-    
-    target_subjects = []
-    if subj_input == "ALL":
+        target_subjects = all_subjects
+    elif subj_input == "ALL":
         target_subjects = all_subjects
     elif (class_root / subj_input).exists():
         target_subjects = [subj_input]
@@ -92,45 +140,122 @@ def main():
         print("❌ Invalid subject.")
         return
 
+    # Week Selection
     week_in = input("📅 Enter Week (or Enter for All): ").strip()
     week = int(week_in) if week_in.isdigit() else None
 
-    # System Power Management
+    # Cache Clearing
+    should_clear = input("\n🧹 Clear cache before processing? (y/n) [n]: ").strip().lower()
+    if should_clear == 'y':
+        if subj_input == "ALL":
+            clear_cache("ALL")
+        else:
+            # Only clear for the selected subject(s)
+            # If user selected ALL, we cleared ALL above.
+            # If user selected one subject, clear that one.
+            clear_cache(subj_input)
+
+    # Execution
+    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False)
+
+
+def run_dev(args):
+    """Run in development mode with CLI arguments."""
+    print(f"⚡ Flashcard Generator v{__version__} (Dev Mode)")
+    
+    if not check_ollama():
+        return
+
+    # Semester
+    semester = args.semester
+    if not semester:
+        semesters = get_semesters()
+        if semesters:
+            semester = semesters[0] # Default to first found
+        else:
+            semester = DEFAULT_SEMESTER
+    
+    class_root, output_dir = get_semester_paths(semester)
+    if not class_root.exists():
+        print(f"❌ Semester directory not found: {class_root}")
+        return
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Subject
+    subject = args.subject.upper()
+    target_subjects = []
+    
+    if subject == "ALL":
+        try:
+            target_subjects = [d.name for d in class_root.iterdir() if d.is_dir()]
+        except Exception:
+            print("❌ Error reading subjects.")
+            return
+    elif (class_root / subject).exists():
+        target_subjects = [subject]
+    else:
+        print(f"❌ Invalid subject: {subject}")
+        return
+
+    # Week
+    week = None
+    if args.week:
+        if args.week.lower() == "all":
+            week = None
+        elif args.week.isdigit():
+            week = int(args.week)
+        else:
+            print(f"❌ Invalid week: {args.week}")
+            return
+    else:
+        # Default to Week 1 in dev mode if not specified
+        week = 1
+
+    # Cache Clearing
+    if args.clear_cache or args.deep_clear:
+        clear_cache(subject)
+        if args.deep_clear:
+            print("✨ Cache cleared (Deep Clean). Exiting.")
+            return
+
+    # Execution
+    print(f"\n📂 Processing: {subject} - Week {week if week else 'ALL'} - {semester}")
+    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=True)
+
+
+def execute_generation(subjects: List[str], semester: str, class_root: Path, output_dir: Path, week: Optional[int], dev_mode: bool = False):
+    """Common execution logic for both modes."""
     os_inhibitor = None
     if os.name == 'nt':
         os_inhibitor = WindowsInhibitor()
         os_inhibitor.inhibit()
 
     try:
-        for i, subject in enumerate(target_subjects, 1):
-            if len(target_subjects) > 1:
+        for i, subject in enumerate(subjects, 1):
+            if len(subjects) > 1:
                 print(f"\n{'='*40}")
-                print(f"🔄 BATCH PROCESSING {i}/{len(target_subjects)}: {subject}")
+                print(f"🔄 BATCH PROCESSING {i}/{len(subjects)}: {subject}")
                 print(f"{'='*40}")
             
-            cfg = Config(semester=semester)
+            cfg = Config(semester=semester, dev_mode=dev_mode)
             gen = FlashcardGenerator(subject, cfg, class_root, output_dir)
             gen.run(week)
         
-        # Post-processing step
+        # Post-processing
         print(f"\n{'='*40}")
         print("🧹 POST-PROCESSING")
         print(f"{'='*40}")
-        
-        from mcq_flashcards.utils.postprocessor import post_process_flashcards
         
         stats = post_process_flashcards(output_dir, verbose=True)
         
         if stats['total_fixes'] > 0:
             print(f"\n✨ Post-processing complete! Fixed {stats['total_fixes']} issues across {stats['files_with_issues']} files.")
             
-            # Verification pass - check if any issues remain
             print("\n🔍 Running verification pass...")
             verify_stats = post_process_flashcards(output_dir, verbose=False)
             
             if verify_stats['total_fixes'] > 0:
                 print(f"⚠️  Warning: {verify_stats['total_fixes']} issues still detected after post-processing!")
-                print("   The post-processor logic may need improvement.")
             else:
                 print("✓ Verification passed: All files are clean!")
         else:
@@ -139,6 +264,56 @@ def main():
     finally:
         if os_inhibitor:
             os_inhibitor.uninhibit()
+
+
+def main():
+    """Main entry point with argument parsing."""
+    parser = argparse.ArgumentParser(
+        description="MCQ Flashcard Generator",
+        usage="%(prog)s [-d SUBJECT [WEEK] [-c]] | %(prog)s (interactive)"
+    )
+    
+    # Dev mode flag
+    parser.add_argument("-d", "--dev", action="store_true", help="Enable development mode")
+    
+    # Positional arguments for dev mode
+    parser.add_argument("subject", nargs="?", help="Subject code or ALL (Required in dev mode)")
+    parser.add_argument("week", nargs="?", help="Week number or ALL (Default: 1)")
+    
+    # Optional flags
+    parser.add_argument("-c", "--clear-cache", action="store_true", help="Clear cache before processing")
+    parser.add_argument("--deep-clear", action="store_true", help="Only clear cache and exit (requires -d)")
+    parser.add_argument("-s", "--semester", help="Override semester (Dev mode)")
+    parser.add_argument("-w", "--week-flag", dest="week_flag", help="Override week (Alternative flag)")
+
+    args = parser.parse_args()
+
+    # Logic Dispatch
+    if args.dev:
+        if args.deep_clear and not args.subject:
+            args.subject = "ALL"
+            
+        if not args.subject:
+            print("❌ Error: Dev mode requires a subject argument")
+            print("\nUsage:")
+            print("  Dev mode:   python mcq_flashcards.py -d <SUBJECT> [WEEK] [-c]")
+            print("  Prod mode:  python mcq_flashcards.py")
+            return
+        
+        # Handle week argument (positional vs flag)
+        if args.week_flag:
+            args.week = args.week_flag
+            
+        run_dev(args)
+    else:
+        # Prod mode (Interactive)
+        if args.subject or args.week or args.clear_cache or args.semester:
+            # User provided args but forgot -d
+            print("❌ Error: Arguments provided without --dev flag.")
+            print("Use -d to enable dev mode, or run without arguments for interactive mode.")
+            return
+            
+        run_interactive()
 
 
 if __name__ == "__main__":

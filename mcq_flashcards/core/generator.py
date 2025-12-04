@@ -86,7 +86,8 @@ class FlashcardGenerator:
             Path to cache file
         """
         combined = f"{self.config.model}_{text}"
-        return CACHE_DIR / f"{hashlib.md5(combined.encode()).hexdigest()}.pkl"
+        hash_key = hashlib.md5(combined.encode()).hexdigest()
+        return CACHE_DIR / f"{self.subject}_{hash_key}.pkl"
 
     def _save_raw_log(self, name: str, data: any, suffix: str = ""):
         """Save raw API response for debugging.
@@ -309,14 +310,24 @@ class FlashcardGenerator:
         
         out_name = f"{self.subject}_W{week:02d}_MCQ.md"
         tag = f"W{week:02d}"
-        out_path = self.output_dir / out_name
         
-        # Interactive Overwrite Check
-        if out_path.exists():
-            print(f"\n⚠️  {out_name} exists.")
-            if input("   Overwrite? (y/n): ").lower() != 'y':
-                print("   Skipping...")
-                return
+        # Dev Mode Handling
+        if self.config.dev_mode:
+            # Use _dev subdirectory and append suffix
+            dev_dir = self.output_dir.parent / "_dev"
+            dev_dir.mkdir(parents=True, exist_ok=True)
+            out_name = f"{self.subject}_W{week:02d}_MCQ_dev.md"
+            out_path = dev_dir / out_name
+            # Auto-overwrite in dev mode (no prompt)
+        else:
+            out_path = self.output_dir / out_name
+            
+            # Interactive Overwrite Check (Prod only)
+            if out_path.exists():
+                print(f"\n⚠️  {out_name} exists.")
+                if input("   Overwrite? (y/n): ").lower() != 'y':
+                    print("   Skipping...")
+                    return
 
         # Write Header
         with open(out_path, 'w', encoding='utf-8') as f:
