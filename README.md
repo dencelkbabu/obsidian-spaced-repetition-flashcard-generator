@@ -17,6 +17,8 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
 *   **🔄 Self-Correction (v2.0):** Automatically detects invalid outputs and prompts the AI to fix them, ensuring high success rates.
 *   **🧹 Auto-Cleanup (v2.7):** Post-processor automatically fixes LLM output inconsistencies and verifies quality.
 *   **📦 Modular Architecture (v2.7):** Clean package structure for better maintainability and extensibility.
+*   **🧪 Comprehensive Testing (v3.9.2):** 83 automated tests ensure code quality and reliability.
+*   **✅ Strict Validation (v3.10.0):** Enhanced validator catches malformed MCQs earlier.
 
 ## 🚀 Prerequisites
 
@@ -25,7 +27,7 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
     *   Default Model: `llama3:8b` (Configurable).
 3.  **Python 3.8+**: With the following dependencies:
 ```bash
-pip install requests pyyaml tqdm
+pip install requests pyyaml tqdm pytest
 ```
 
 ## 📂 Project Structure
@@ -34,6 +36,8 @@ pip install requests pyyaml tqdm
 _scripts/
 ├── mcq_flashcards.py          # Backwards-compatible entry point
 ├── cli.py                     # Main CLI interface
+├── pytest.ini                 # Test configuration
+├── tests/                     # Test suite (83 tests)
 └── mcq_flashcards/            # Core package
     ├── core/                  # Core functionality
     │   ├── config.py          # Configuration & constants
@@ -116,14 +120,80 @@ Question text?
 > **Explanation:** Short explanation of why this is the correct answer.
 ```
 
+## 🧪 Testing
+
+The project includes comprehensive automated tests to ensure code quality and reliability.
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_mcq_validator.py
+
+# Run with coverage (requires pytest-cov)
+pip install pytest-cov
+pytest --cov=mcq_flashcards --cov-report=html
+```
+
+### Test Coverage
+
+The test suite includes **83 comprehensive tests** covering:
+
+- **Unit Tests (38 tests)**
+  - MCQCleaner (15 tests) - Text cleaning and formatting
+  - MCQValidator (14 tests) - Format validation with strict checks
+  - AutoTuner (13 tests) - Performance optimization
+  - Cache Management (3 tests) - Cache clearing logic
+
+- **Integration Tests (42 tests)**
+  - OllamaClient (9 tests) - API interaction and retries
+  - FlashcardGenerator (10 tests) - End-to-end generation
+  - PostProcessor (9 tests) - Output cleanup
+  - CLI (14 tests) - User interface and argument parsing
+
+All tests run in < 2 seconds with no external dependencies required.
+
 ## 📝 Changelog
 
-### v3.0.0 (2025-12-04) - Major Refactoring
-- **BREAKING CHANGE:** Refactored monolithic script into modular package structure
-- **Added** automatic post-processing with verification
-- **Fixed** escaped newlines and regex patterns
-- **Improved** UX: press Enter to process ALL subjects
-- **Enhanced** output quality with automatic cleanup
+### v3.10.0 (2025-12-05) - Stricter Validation
+- **feat:** enhance MCQ validator with strict format checks
+- **feat:** add validation for exactly 4 options (previously only checked 1 & 2)
+- **feat:** add answer number validation (must be 1-4)
+- **feat:** add explanation requirement check
+- **test:** add 6 new validator test cases
+- **refactor:** improve output quality through earlier error detection
+
+### v3.9.2 (2025-12-05) - Testing Infrastructure
+- **test:** add comprehensive automated testing (83 tests total)
+- **test:** add unit tests for all processing and utility modules
+- **test:** add integration tests for generator, client, and CLI
+- **test:** add test fixtures and pytest configuration
+- **chore:** add `.gitignore` entries for test artifacts
+
+### v3.0.0 - v3.9.1 (2025-12-04) - Major Refactoring
+- **refactor!:** modularize flashcard generator into package structure (BREAKING CHANGE)
+- **feat:** add automatic post-processing with verification
+- **fix:** resolve escaped newlines and regex patterns
+- **feat:** improve UX - press Enter to process ALL subjects
+- **feat:** enhance output quality with automatic cleanup
+- **feat:** auto-cleanup `_dev` folder in prod mode
+- **feat:** simplify interactive mode with preset system
+- **feat:** add difficulty levels for MCQ generation
+- **feat:** add Bloom's Taxonomy selection to interactive mode
+- **feat:** add Bloom's Taxonomy targeting for MCQ generation
+- **refactor:** extract helper functions from `run_interactive`
+- **test:** add unit tests for cache clearing and MCQ validation
+- **feat:** add type hints and extract magic numbers
+- **refactor:** improve error handling and post-processor coverage
+- **feat:** add dev/prod modes and cache clearing
+- **feat:** add semester selection with interactive prompt
+- **docs:** fix README formatting and add Claude Sonnet to credits
 
 ### v2.6.0 (Previous)
 - Added batch processing for multiple subjects
