@@ -608,7 +608,7 @@ class FlashcardGenerator:
 # --- CLI ENTRY POINT ---
 
 def main():
-    print("⚡ Flashcard Generator v2.5 (AutoTuner + Refine)")
+    print("⚡ Flashcard Generator v2.5")
     
     # Check Ollama First
     try:
@@ -620,31 +620,42 @@ def main():
     # Interactive Inputs
     print(f"\n📂 Available Subjects in {CLASS_ROOT}:")
     try:
-        subjects = [d.name for d in CLASS_ROOT.iterdir() if d.is_dir() and d.name != "Flashcards"]
-        print(" | ".join(subjects))
+        all_subjects = [d.name for d in CLASS_ROOT.iterdir() if d.is_dir() and d.name != "Flashcards"]
+        print(" | ".join(all_subjects))
     except Exception:
         print("❌ Error reading subjects.")
         return
 
-    subj = input("\n🎯 Enter Subject Code: ").strip().upper()
-    if not (CLASS_ROOT / subj).exists():
+    subj_input = input("\n🎯 Enter Subject Code (or 'ALL'): ").strip().upper()
+    
+    target_subjects = []
+    if subj_input == "ALL":
+        target_subjects = all_subjects
+    elif (CLASS_ROOT / subj_input).exists():
+        target_subjects = [subj_input]
+    else:
         print("❌ Invalid subject.")
         return
 
     week_in = input("📅 Enter Week (or Enter for All): ").strip()
     week = int(week_in) if week_in.isdigit() else None
 
-    # Run
-    cfg = Config()
-    gen = FlashcardGenerator(subj, cfg)
-    
+    # System Power Management
     os_inhibitor = None
     if os.name == 'nt':
         os_inhibitor = WindowsInhibitor()
         os_inhibitor.inhibit()
-        
+
     try:
-        gen.run(week)
+        for i, subject in enumerate(target_subjects, 1):
+            print(f"\n{'='*40}")
+            print(f"🔄 BATCH PROCESSING {i}/{len(target_subjects)}: {subject}")
+            print(f"{'='*40}")
+            
+            cfg = Config()
+            gen = FlashcardGenerator(subject, cfg)
+            gen.run(week)
+            
     finally:
         if os_inhibitor:
             os_inhibitor.uninhibit()
