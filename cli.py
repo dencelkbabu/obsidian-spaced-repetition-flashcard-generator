@@ -77,6 +77,87 @@ def get_semesters() -> List[str]:
         return []
 
 
+
+def select_semester() -> Optional[str]:
+    """Prompt user to select a semester interactively.
+    
+    Returns:
+        Selected semester name, or None if selection failed
+    """
+    semesters = get_semesters()
+    if not semesters:
+        print("❌ No semesters found.")
+        return None
+
+    print(f"\n📚 Available Semesters:")
+    for i, sem in enumerate(semesters, 1):
+        print(f"  {i}. {sem}")
+    
+    sem_input = input("\n📚 Select Semester (number or name, or Enter for default): ").strip()
+    
+    if not sem_input:
+        semester = DEFAULT_SEMESTER
+        print(f"   → Using default: {semester}")
+        return semester
+    
+    if sem_input.isdigit():
+        idx = int(sem_input) - 1
+        if 0 <= idx < len(semesters):
+            return semesters[idx]
+        else:
+            print("❌ Invalid semester number.")
+            return None
+    
+    matches = [s for s in semesters if sem_input.lower() in s.lower()]
+    if len(matches) == 1:
+        return matches[0]
+    else:
+        print("❌ Invalid semester name.")
+        return None
+
+
+def select_subjects(class_root: Path, semester: str) -> Optional[List[str]]:
+    """Prompt user to select subjects interactively.
+    
+    Args:
+        class_root: Path to semester's class root directory
+        semester: Semester name for display
+        
+    Returns:
+        List of selected subject codes, or None if selection failed
+    """
+    print(f"\n📂 Available Subjects in {semester}:")
+    try:
+        all_subjects = [d.name for d in class_root.iterdir() if d.is_dir()]
+        print(" | ".join(all_subjects))
+    except (FileNotFoundError, PermissionError) as e:
+        print(f"❌ Error reading subjects: {e}")
+        return None
+
+    subj_input = input("\n🎯 Enter Subject Code (or press Enter for ALL): ").strip().upper()
+    
+    if not subj_input or subj_input == "ALL":
+        if not subj_input:
+            print("   → Processing ALL subjects")
+        return all_subjects
+    
+    if (class_root / subj_input).exists():
+        return [subj_input]
+    else:
+        print("❌ Invalid subject.")
+        return None
+
+
+def select_week() -> Optional[int]:
+    """Prompt user to select a week number.
+    
+    Returns:
+        Week number, or None for all weeks
+    """
+    week_in = input("📅 Enter Week (or Enter for All): ").strip()
+    return int(week_in) if week_in.isdigit() else None
+
+
 def run_interactive() -> None:
     """Run in interactive production mode."""
     print(f"⚡ Flashcard Generator v{__version__}")
@@ -85,76 +166,27 @@ def run_interactive() -> None:
         return
 
     # Semester Selection
-    semesters = get_semesters()
-    if not semesters:
-        print("❌ No semesters found.")
+    semester = select_semester()
+    if not semester:
         return
-
-    print(f"\n📚 Available Semesters:")
-    for i, sem in enumerate(semesters, 1):
-        print(f"  {i}. {sem}")
-    
-    sem_input = input("\n📚 Select Semester (number or name, or Enter for default): ").strip()
-    
-    semester = DEFAULT_SEMESTER
-    if not sem_input:
-        print(f"   → Using default: {semester}")
-    elif sem_input.isdigit():
-        idx = int(sem_input) - 1
-        if 0 <= idx < len(semesters):
-            semester = semesters[idx]
-        else:
-            print("❌ Invalid semester number.")
-            return
-    else:
-        matches = [s for s in semesters if sem_input.lower() in s.lower()]
-        if len(matches) == 1:
-            semester = matches[0]
-        else:
-            print("❌ Invalid semester name.")
-            return
     
     class_root, output_dir = get_semester_paths(semester)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Subject Selection
-    print(f"\n📂 Available Subjects in {semester}:")
-    try:
-        all_subjects = [d.name for d in class_root.iterdir() if d.is_dir()]
-        print(" | ".join(all_subjects))
-    except (FileNotFoundError, PermissionError) as e:
-        print(f"❌ Error reading subjects: {e}")
-        return
-
-    subj_input = input("\n🎯 Enter Subject Code (or press Enter for ALL): ").strip().upper()
-    
-    target_subjects = []
-    if not subj_input:
-        subj_input = "ALL"
-        print("   → Processing ALL subjects")
-        target_subjects = all_subjects
-    elif subj_input == "ALL":
-        target_subjects = all_subjects
-    elif (class_root / subj_input).exists():
-        target_subjects = [subj_input]
-    else:
-        print("❌ Invalid subject.")
+    target_subjects = select_subjects(class_root, semester)
+    if not target_subjects:
         return
 
     # Week Selection
-    week_in = input("📅 Enter Week (or Enter for All): ").strip()
-    week = int(week_in) if week_in.isdigit() else None
+    week = select_week()
 
     # Cache Clearing
     should_clear = input("\n🧹 Clear cache before processing? (y/n) [n]: ").strip().lower()
     if should_clear == 'y':
-        if subj_input == "ALL":
-            clear_cache("ALL")
-        else:
-            # Only clear for the selected subject(s)
-            # If user selected ALL, we cleared ALL above.
-            # If user selected one subject, clear that one.
-            clear_cache(subj_input)
+        # Determine subject for cache clearing
+        subject_for_cache = "ALL" if len(target_subjects) > 1 else target_subjects[0]
+        clear_cache(subject_for_cache)
 
     # Execution
     execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False)
