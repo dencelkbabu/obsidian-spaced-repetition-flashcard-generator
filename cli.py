@@ -49,10 +49,10 @@ def clear_cache(subject: str) -> None:
 
     files_to_delete = []
     if subject == "ALL":
-        files_to_delete = list(CACHE_DIR.glob("*.pkl"))
+        files_to_delete = list(CACHE_DIR.glob("*.json")) + list(CACHE_DIR.glob("*.pkl"))
         print(f"\n🧹 Clearing entire cache directory...")
     else:
-        files_to_delete = list(CACHE_DIR.glob(f"{subject}_*.pkl"))
+        files_to_delete = list(CACHE_DIR.glob(f"{subject}_*.json")) + list(CACHE_DIR.glob(f"{subject}_*.pkl"))
         print(f"\n🧹 Clearing cache for {subject}...")
 
     if not files_to_delete:
