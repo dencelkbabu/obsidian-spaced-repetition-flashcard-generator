@@ -396,6 +396,12 @@ def execute_generation(subjects: List[str], semester: str, class_root: Path, out
                 print(f"{'='*40}")
             
             cfg = Config(semester=semester, dev_mode=dev_mode, bloom_level=bloom_level, difficulty=difficulty)
+            
+            # Validate configuration
+            if not cfg.validate():
+                print("❌ Configuration validation failed. Check logs for details.")
+                continue
+
             gen = FlashcardGenerator(subject, cfg, class_root, output_dir)
             gen.run(week)
         

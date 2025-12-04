@@ -140,6 +140,30 @@ class Config:
     dev_mode: bool = False
     bloom_level: Optional[str] = None  # Target Bloom's taxonomy level
     difficulty: Optional[str] = None  # Target difficulty level
+    
+    def validate(self) -> bool:
+        """Validate configuration settings.
+        
+        Returns:
+            True if valid, False otherwise
+        """
+        # Validate semester path
+        class_root, _ = get_semester_paths(self.semester)
+        if not class_root.exists():
+            logger.error(f"Semester directory not found: {class_root}")
+            return False
+            
+        # Validate weeks
+        if self.start_week < 1 or self.end_week < self.start_week:
+            logger.error(f"Invalid week range: {self.start_week}-{self.end_week}")
+            return False
+            
+        # Validate workers
+        if self.workers < 1 or self.workers > 16:
+            logger.error(f"Invalid worker count: {self.workers} (Must be 1-16)")
+            return False
+            
+        return True
 
 
 @dataclass
