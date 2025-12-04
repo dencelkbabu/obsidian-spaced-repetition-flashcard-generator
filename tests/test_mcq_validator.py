@@ -93,6 +93,7 @@ What is 2 + 2?
 4) Five
 ?
 **Answer:** 3) Four
+> **Explanation:** 2 + 2 equals 4.
 """
         self.assertTrue(self.validator.validate(valid_mcq),
                        "Alternative numbering format should be valid")
@@ -107,6 +108,7 @@ What is the capital of France?
 4. Madrid
 ?
 **Answer:** 2) Paris
+> **Explanation:** Paris is the capital of France.
 
 What is 2 + 2?
 1. Three
@@ -115,9 +117,97 @@ What is 2 + 2?
 4. Six
 ?
 **Answer:** 2) Four
+> **Explanation:** 2 + 2 equals 4.
 """
         self.assertTrue(self.validator.validate(valid_mcqs),
                        "Multiple valid MCQs should pass validation")
+    
+    def test_missing_option_3(self):
+        """Test that validator rejects MCQ with only 3 options."""
+        invalid_mcq = """
+What is the capital of France?
+1. London
+2. Paris
+3. Berlin
+?
+**Answer:** 2) Paris
+> **Explanation:** Paris is the capital.
+"""
+        self.assertFalse(self.validator.validate(invalid_mcq),
+                        "MCQ with only 3 options should fail validation")
+    
+    def test_missing_option_4(self):
+        """Test that validator rejects MCQ with only 2 options."""
+        invalid_mcq = """
+What is the capital of France?
+1. London
+2. Paris
+?
+**Answer:** 2) Paris
+> **Explanation:** Paris is the capital.
+"""
+        self.assertFalse(self.validator.validate(invalid_mcq),
+                        "MCQ with only 2 options should fail validation")
+    
+    def test_invalid_answer_number_0(self):
+        """Test that validator rejects answer number 0."""
+        invalid_mcq = """
+What is the capital of France?
+1. London
+2. Paris
+3. Berlin
+4. Madrid
+?
+**Answer:** 0) None
+> **Explanation:** Invalid answer.
+"""
+        self.assertFalse(self.validator.validate(invalid_mcq),
+                        "Answer number 0 should fail validation")
+    
+    def test_invalid_answer_number_5(self):
+        """Test that validator rejects answer number 5."""
+        invalid_mcq = """
+What is the capital of France?
+1. London
+2. Paris
+3. Berlin
+4. Madrid
+?
+**Answer:** 5) Other
+> **Explanation:** Invalid answer.
+"""
+        self.assertFalse(self.validator.validate(invalid_mcq),
+                        "Answer number 5 should fail validation")
+    
+    def test_missing_explanation(self):
+        """Test that validator rejects MCQ without explanation."""
+        invalid_mcq = """
+What is the capital of France?
+1. London
+2. Paris
+3. Berlin
+4. Madrid
+?
+**Answer:** 2) Paris
+"""
+        self.assertFalse(self.validator.validate(invalid_mcq),
+                        "MCQ without explanation should fail validation")
+    
+    def test_all_four_options_required(self):
+        """Test that all 4 options must be present."""
+        # Valid with all 4
+        valid_mcq = """
+Question?
+1. Opt1
+2. Opt2
+3. Opt3
+4. Opt4
+?
+**Answer:** 1) Opt1
+> **Explanation:** Correct.
+"""
+        self.assertTrue(self.validator.validate(valid_mcq),
+                       "MCQ with all 4 options should pass")
 
 
 if __name__ == '__main__':
