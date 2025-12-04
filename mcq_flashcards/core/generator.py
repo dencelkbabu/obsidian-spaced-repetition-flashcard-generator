@@ -77,6 +77,26 @@ class FlashcardGenerator:
             return "Economics Professor", "Focus on micro/macro theories and standard economic definitions."
         return "University Professor", "Focus on academic accuracy."
 
+    def _get_bloom_instruction(self) -> str:
+        """Get Bloom's taxonomy instruction for prompt.
+        
+        Returns:
+            Bloom's level instruction, or empty string if no level specified
+        """
+        if not self.config.bloom_level:
+            return ""
+        
+        instructions = {
+            "remember": "COGNITIVE LEVEL: REMEMBER - Focus on RECALL and RECOGNITION. Ask about facts, terms, basic concepts, and definitions that can be directly retrieved from the text.",
+            "understand": "COGNITIVE LEVEL: UNDERSTAND - Focus on COMPREHENSION. Ask students to explain, summarize, interpret, or describe concepts in their own words.",
+            "apply": "COGNITIVE LEVEL: APPLY - Focus on APPLICATION. Ask students to use concepts, theories, or procedures in new situations or practical scenarios.",
+            "analyze": "COGNITIVE LEVEL: ANALYZE - Focus on ANALYSIS. Ask students to compare, contrast, categorize, or examine relationships between concepts.",
+            "evaluate": "COGNITIVE LEVEL: EVALUATE - Focus on EVALUATION. Ask students to judge, critique, assess, or justify decisions based on criteria.",
+            "create": "COGNITIVE LEVEL: CREATE - Focus on CREATION. Ask students to design, construct, formulate, or propose new solutions or approaches."
+        }
+        return instructions.get(self.config.bloom_level, "")
+
+
     def get_cache_key(self, text: str) -> Path:
         """Generate cache key for a given text.
         
@@ -146,10 +166,13 @@ class FlashcardGenerator:
                 pass  # Corrupt cache, ignore
 
         # Prompt Construction
+        bloom_instruction = self._get_bloom_instruction()
+        bloom_section = f"\n{bloom_instruction}\n" if bloom_instruction else ""
+        
         prompt = f"""
         You are a {self.persona}. {self.focus}
         TASK: Generate 2 high-quality Multiple Choice Questions (MCQs) based STRICTLY on the text below.
-        
+        {bloom_section}
         CRITICAL RULES:
         1. GROUNDING: Answer must be EXPLICITLY in the text.
         2. DISTRACTORS: Plausible but undeniably wrong.
@@ -310,7 +333,9 @@ class FlashcardGenerator:
         # Reset Stats for this week
         self.stats = ProcessingStats()
         
-        out_name = f"{self.subject}_W{week:02d}_MCQ.md"
+        # Build filename with optional Bloom's level
+        bloom_suffix = f"_{self.config.bloom_level}" if self.config.bloom_level else ""
+        out_name = f"{self.subject}_W{week:02d}_MCQ{bloom_suffix}.md"
         tag = f"W{week:02d}"
         
         # Dev Mode Handling
@@ -318,7 +343,7 @@ class FlashcardGenerator:
             # Use _dev subdirectory and append suffix
             dev_dir = self.output_dir.parent / "_dev"
             dev_dir.mkdir(parents=True, exist_ok=True)
-            out_name = f"{self.subject}_W{week:02d}_MCQ_dev.md"
+            out_name = f"{self.subject}_W{week:02d}_MCQ{bloom_suffix}_dev.md"
             out_path = dev_dir / out_name
             # Auto-overwrite in dev mode (no prompt)
         else:

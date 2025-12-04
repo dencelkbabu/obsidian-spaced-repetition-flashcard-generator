@@ -18,7 +18,8 @@ from mcq_flashcards.core.config import (
     BCOM_ROOT, 
     DEFAULT_SEMESTER, 
     get_semester_paths,
-    CACHE_DIR
+    CACHE_DIR,
+    BLOOM_LEVELS,
 )
 from mcq_flashcards.core.generator import FlashcardGenerator
 from mcq_flashcards.utils.power import WindowsInhibitor
@@ -189,7 +190,7 @@ def run_interactive() -> None:
         clear_cache(subject_for_cache)
 
     # Execution
-    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False)
+    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False, bloom_level=args.bloom if hasattr(args, 'bloom') else None)
 
 
 def run_dev(args: argparse.Namespace) -> None:
@@ -253,10 +254,10 @@ def run_dev(args: argparse.Namespace) -> None:
 
     # Execution
     print(f"\n📂 Processing: {subject} - Week {week if week else 'ALL'} - {semester}")
-    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=True)
+    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=True, bloom_level=args.bloom)
 
 
-def execute_generation(subjects: List[str], semester: str, class_root: Path, output_dir: Path, week: Optional[int], dev_mode: bool = False):
+def execute_generation(subjects: List[str], semester: str, class_root: Path, output_dir: Path, week: Optional[int], dev_mode: bool = False, bloom_level: Optional[str] = None):
     """Common execution logic for both modes."""
     os_inhibitor = None
     if os.name == 'nt':
@@ -270,7 +271,7 @@ def execute_generation(subjects: List[str], semester: str, class_root: Path, out
                 print(f"🔄 BATCH PROCESSING {i}/{len(subjects)}: {subject}")
                 print(f"{'='*40}")
             
-            cfg = Config(semester=semester, dev_mode=dev_mode)
+            cfg = Config(semester=semester, dev_mode=dev_mode, bloom_level=bloom_level)
             gen = FlashcardGenerator(subject, cfg, class_root, output_dir)
             gen.run(week)
         
@@ -316,6 +317,7 @@ def main() -> None:
     # Optional flags
     parser.add_argument("-c", "--clear-cache", action="store_true", help="Clear cache before processing")
     parser.add_argument("--deep-clear", action="store_true", help="Only clear cache and exit (requires -d)")
+    parser.add_argument("--bloom", choices=BLOOM_LEVELS, help="Target Bloom's taxonomy level")
     parser.add_argument("-s", "--semester", help="Override semester (Dev mode)")
     parser.add_argument("-w", "--week-flag", dest="week_flag", help="Override week (Alternative flag)")
 

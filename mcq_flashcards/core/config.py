@@ -7,6 +7,7 @@ data structures used throughout the application.
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional
 
 # --- PATH CONFIGURATION ---
 # Go up two levels: mcq_flashcards/core -> mcq_flashcards -> _scripts
@@ -60,6 +61,10 @@ QUESTIONS_PER_PROMPT = 2  # Number of MCQs to generate per API call
 # --- AUTOTUNER SETTINGS ---
 MAX_METRICS_HISTORY = 50  # Maximum number of latency/error samples to keep
 
+# --- BLOOM'S TAXONOMY ---
+BLOOM_LEVELS = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
+DEFAULT_BLOOM_LEVEL = None  # None = mixed levels
+
 # --- LOGGING SETUP ---
 logging.basicConfig(
     level=logging.INFO,
@@ -83,6 +88,7 @@ class Config:
     end_week: int = 12
     semester: str = DEFAULT_SEMESTER
     dev_mode: bool = False
+    bloom_level: Optional[str] = None  # Target Bloom's taxonomy level
 
 
 @dataclass

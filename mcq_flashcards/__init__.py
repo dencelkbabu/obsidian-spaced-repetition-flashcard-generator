@@ -3,10 +3,10 @@
 A modular flashcard generation system for creating high-quality
 multiple-choice questions from lecture notes.
 
-Version: 3.6.0
+Version: 3.7.0
 """
 
-__version__ = "3.6.0"
+__version__ = "3.7.0"
 
 # Core exports
 from mcq_flashcards.core.config import Config, ProcessingStats
