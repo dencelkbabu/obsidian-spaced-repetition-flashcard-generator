@@ -17,7 +17,7 @@ class WindowsInhibitor:
         """Initialize the inhibitor."""
         pass
 
-    def inhibit(self):
+    def inhibit(self) -> None:
         """Prevent system from sleeping.
         
         Uses Windows API to keep the system awake during
@@ -28,7 +28,7 @@ class WindowsInhibitor:
             self.ES_CONTINUOUS | self.ES_SYSTEM_REQUIRED
         )
 
-    def uninhibit(self):
+    def uninhibit(self) -> None:
         """Allow system to sleep normally.
         
         Restores normal power management behavior.

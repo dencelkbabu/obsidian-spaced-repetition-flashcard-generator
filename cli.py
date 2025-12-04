@@ -77,7 +77,7 @@ def get_semesters() -> List[str]:
         return []
 
 
-def run_interactive():
+def run_interactive() -> None:
     """Run in interactive production mode."""
     print(f"⚡ Flashcard Generator v{__version__}")
     
@@ -160,7 +160,7 @@ def run_interactive():
     execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False)
 
 
-def run_dev(args):
+def run_dev(args: argparse.Namespace) -> None:
     """Run in development mode with CLI arguments."""
     print(f"⚡ Flashcard Generator v{__version__} (Dev Mode)")
     
@@ -267,7 +267,7 @@ def execute_generation(subjects: List[str], semester: str, class_root: Path, out
             os_inhibitor.uninhibit()
 
 
-def main():
+def main() -> None:
     """Main entry point with argument parsing."""
     parser = argparse.ArgumentParser(
         description="MCQ Flashcard Generator",

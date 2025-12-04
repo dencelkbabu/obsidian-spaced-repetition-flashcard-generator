@@ -10,7 +10,7 @@ import threading
 import time
 from typing import List
 
-from mcq_flashcards.core.config import GPU_UTIL_HIGH, GPU_UTIL_LOW, LATENCY_TARGET
+from mcq_flashcards.core.config import GPU_UTIL_HIGH, GPU_UTIL_LOW, LATENCY_TARGET, MAX_METRICS_HISTORY
 
 
 class AutoTuner:
@@ -30,14 +30,14 @@ class AutoTuner:
         """
         with self.lock:
             self.latencies.append(t)
-            if len(self.latencies) > 50:
+            if len(self.latencies) > MAX_METRICS_HISTORY:
                 self.latencies.pop(0)
 
     def add_error(self):
         """Record an error occurrence with timestamp."""
         with self.lock:
             self.errors.append(time.time())
-            if len(self.errors) > 50:
+            if len(self.errors) > MAX_METRICS_HISTORY:
                 self.errors.pop(0)
 
     def avg_latency(self) -> float:

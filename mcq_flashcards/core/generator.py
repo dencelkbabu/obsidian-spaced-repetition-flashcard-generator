@@ -26,6 +26,7 @@ from mcq_flashcards.core.config import (
     RAW_DIR,
     ERROR_DIR,
     BASE_DELAY,
+    MAX_PROMPT_LENGTH,
     logger,
 )
 from mcq_flashcards.core.client import OllamaClient
@@ -165,7 +166,7 @@ class FlashcardGenerator:
         > **Explanation:** Short explanation.
 
         TEXT TO PROCESS:
-        {text[:6000]}
+        {text[:MAX_PROMPT_LENGTH]}
         """
 
         worker_state = {"delay": BASE_DELAY + random.uniform(0, 0.2), "retries": 0}
