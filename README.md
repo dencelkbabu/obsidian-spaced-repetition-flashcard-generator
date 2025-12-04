@@ -118,8 +118,8 @@ Question text?
 
 ## 📝 Changelog
 
-### v3.0.0 (2025-12-04) - Major Refactoring`r`n- **BREAKING CHANGE:** Refactored monolithic script into modular package structure
-- **Refactored** monolithic script into modular package structure
+### v3.0.0 (2025-12-04) - Major Refactoring
+- **BREAKING CHANGE:** Refactored monolithic script into modular package structure
 - **Added** automatic post-processing with verification
 - **Fixed** escaped newlines and regex patterns
 - **Improved** UX: press Enter to process ALL subjects
@@ -129,10 +129,10 @@ Question text?
 - Added batch processing for multiple subjects
 - Improved error handling
 
-### v2.0
+### v2.0.0
 - AutoTuner for dynamic performance optimization
 - Self-correction mechanism for invalid outputs
 
 ## Credits
 
-This project was vibecoded on Google Antigravity, with help from ChatGPT, Mistral, Qwen.
+This project was vibecoded on Google Antigravity, with help from ChatGPT, Claude Sonnet, Mistral, and Qwen.
