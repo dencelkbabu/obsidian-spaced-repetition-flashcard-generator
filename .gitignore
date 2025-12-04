@@ -20,3 +20,8 @@ Thumbs.db
 _errors/
 _raw_responses/
 _scripts.code-workspace
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage

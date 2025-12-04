@@ -1,0 +1,28 @@
+{
+  "valid_mcq_response": {
+    "model": "llama3:8b",
+    "created_at": "2024-12-05T00:00:00Z",
+    "response": "What is the fundamental equation in accounting?\n1. Revenue - Expenses = Profit\n2. Assets = Liabilities + Equity\n3. Debits = Credits\n4. Income - Costs = Net Income\n?\n**Answer:** 2) Assets = Liabilities + Equity\n> **Explanation:** The accounting equation (Assets = Liabilities + Equity) is the foundation of double-entry bookkeeping and must always balance.\n\nWhich branch of accounting focuses on external reporting?\n1. Managerial Accounting\n2. Tax Accounting\n3. Financial Accounting\n4. Cost Accounting\n?\n**Answer:** 3) Financial Accounting\n> **Explanation:** Financial accounting is concerned with preparing financial statements for external stakeholders like investors and creditors.",
+    "done": true
+  },
+  
+  "invalid_mcq_response": {
+    "model": "llama3:8b",
+    "created_at": "2024-12-05T00:00:00Z",
+    "response": "Here are some questions about accounting:\n\nAccounting is important because it helps track money.\n\nWhat is accounting?\nA) Recording transactions\nB) Making money\nC) Counting things\n\nAnswer: A",
+    "done": true
+  },
+  
+  "refined_mcq_response": {
+    "model": "llama3:8b",
+    "created_at": "2024-12-05T00:00:00Z",
+    "response": "What is accounting?\n1. Recording transactions\n2. Making money\n3. Counting things\n4. Auditing books\n?\n**Answer:** 1) Recording transactions\n> **Explanation:** Accounting is the systematic process of recording, measuring, and communicating financial information.",
+    "done": true
+  },
+  
+  "error_response": {
+    "error": "model not found"
+  },
+  
+  "timeout_response": null
+}
