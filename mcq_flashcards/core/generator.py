@@ -141,7 +141,7 @@ class FlashcardGenerator:
                     with self.stats_lock:
                         self.stats.cache_hits += 1
                     return pickle.load(f)
-            except Exception:
+            except (pickle.UnpicklingError, EOFError, FileNotFoundError):
                 pass  # Corrupt cache, ignore
 
         # Prompt Construction
@@ -294,7 +294,8 @@ class FlashcardGenerator:
             links = re.findall(r'\[\[([^|#\]]+)(?:[|#][^\]]+)?\]\]', content)
             cleaned_links = {link.strip() for link in links}
             return summary, cleaned_links
-        except Exception:
+        except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+            logger.warning(f"Failed to extract summary from {file_path}: {e}")
             return None, set()
 
     def process_week(self, week: int, files: List[Path], limit: int):

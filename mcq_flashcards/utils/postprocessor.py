@@ -187,7 +187,7 @@ def post_process_flashcards(output_dir: Path, verbose: bool = True) -> dict:
         'issues_by_file': {}
     }
     
-    for file_path in output_dir.glob("*_MCQ.md"):
+    for file_path in output_dir.glob("*_MCQ*.md"):
         fixes, issues = processor.process_file(file_path)
         stats['files_processed'] += 1
         stats['total_fixes'] += fixes

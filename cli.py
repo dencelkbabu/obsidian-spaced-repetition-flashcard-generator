@@ -30,7 +30,7 @@ def check_ollama() -> bool:
     try:
         requests.get("http://localhost:11434", timeout=1)
         return True
-    except:
+    except (requests.ConnectionError, requests.Timeout) as e:
         print("❌ Error: Ollama is not running.")
         return False
 
@@ -72,7 +72,8 @@ def get_semesters() -> List[str]:
     try:
         return [d.name for d in BCOM_ROOT.iterdir() 
                 if d.is_dir() and d.name.startswith("Semester")]
-    except Exception:
+    except (FileNotFoundError, PermissionError) as e:
+        print(f"⚠️  Warning: Could not read semesters: {e}")
         return []
 
 
@@ -121,8 +122,8 @@ def run_interactive():
     try:
         all_subjects = [d.name for d in class_root.iterdir() if d.is_dir()]
         print(" | ".join(all_subjects))
-    except Exception:
-        print("❌ Error reading subjects.")
+    except (FileNotFoundError, PermissionError) as e:
+        print(f"❌ Error reading subjects: {e}")
         return
 
     subj_input = input("\n🎯 Enter Subject Code (or press Enter for ALL): ").strip().upper()
@@ -188,8 +189,8 @@ def run_dev(args):
     if subject == "ALL":
         try:
             target_subjects = [d.name for d in class_root.iterdir() if d.is_dir()]
-        except Exception:
-            print("❌ Error reading subjects.")
+        except (FileNotFoundError, PermissionError) as e:
+            print(f"❌ Error reading subjects: {e}")
             return
     elif (class_root / subject).exists():
         target_subjects = [subject]
