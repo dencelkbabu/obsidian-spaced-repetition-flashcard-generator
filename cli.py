@@ -70,6 +70,22 @@ def clear_cache(subject: str) -> None:
     print(f"   → Cleared {count} cache files")
 
 
+def cleanup_dev_folder(output_dir: Path) -> None:
+    """Clean up _dev folder and its contents.
+    
+    Args:
+        output_dir: Path to the Flashcards output directory
+    """
+    dev_dir = output_dir.parent / "_dev"
+    if dev_dir.exists():
+        try:
+            import shutil
+            shutil.rmtree(dev_dir)
+            print("🧹 Cleaned up _dev folder from previous testing")
+        except Exception as e:
+            print(f"⚠️  Warning: Could not clean _dev folder: {e}")
+
+
 def get_semesters() -> List[str]:
     """Get list of available semesters."""
     try:
@@ -275,6 +291,9 @@ def run_interactive() -> None:
     
     class_root, output_dir = get_semester_paths(semester)
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Clean up _dev folder from testing
+    cleanup_dev_folder(output_dir)
 
     # Subject Selection
     target_subjects = select_subjects(class_root, semester)
