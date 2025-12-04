@@ -41,6 +41,10 @@ class TestFlashcardGenerator(unittest.TestCase):
             self.class_root,
             self.output_dir
         )
+        
+        # Ensure cache dir exists (might be deleted by other tests)
+        from mcq_flashcards.core.config import CACHE_DIR
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
     
     def tearDown(self):
         """Clean up test environment."""
@@ -88,12 +92,12 @@ class TestFlashcardGenerator(unittest.TestCase):
         
         self.assertEqual(key1, key2, "Same text should generate same cache key")
         self.assertTrue(key1.name.startswith("ACCT1001_"))
-        self.assertTrue(key1.name.endswith(".pkl"))
+        self.assertTrue(key1.name.endswith(".json"))
     
     def test_generate_single_with_cache(self):
         """Test that cached responses are reused."""
         mock_response = {
-            "response": "Question?\n1. Opt1\n2. Opt2\n3. Opt3\n4. Opt4\n?\n**Answer:** 1) Opt1"
+            "response": "Question?\n1. Opt1\n2. Opt2\n3. Opt3\n4. Opt4\n?\n**Answer:** 1) Opt1\n**Explanation:** Because."
         }
         
         with patch.object(self.generator.client, 'generate', return_value=mock_response) as mock_generate:

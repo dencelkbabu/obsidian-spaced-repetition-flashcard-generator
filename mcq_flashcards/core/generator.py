@@ -7,7 +7,6 @@ the entire MCQ generation process from lecture notes.
 import concurrent.futures
 import hashlib
 import json
-import pickle
 import random
 import re
 import threading
@@ -114,7 +113,7 @@ class FlashcardGenerator:
         """
         combined = f"{self.config.model}_{text}"
         hash_key = hashlib.md5(combined.encode()).hexdigest()
-        return CACHE_DIR / f"{self.subject}_{hash_key}.pkl"
+        return CACHE_DIR / f"{self.subject}_{hash_key}.json"
 
     def _save_raw_log(self, name: str, data: any, suffix: str = ""):
         """Save raw API response for debugging.
@@ -184,11 +183,11 @@ class FlashcardGenerator:
         cache_path = self.get_cache_key(text)
         if cache_path.exists():
             try:
-                with open(cache_path, "rb") as f:
+                with open(cache_path, "r", encoding="utf-8") as f:
                     with self.stats_lock:
                         self.stats.cache_hits += 1
-                    return pickle.load(f)
-            except (pickle.UnpicklingError, EOFError, FileNotFoundError):
+                    return json.load(f)
+            except (json.JSONDecodeError, EOFError, FileNotFoundError):
                 pass  # Corrupt cache, ignore
 
         # Construct Prompt
@@ -234,8 +233,8 @@ class FlashcardGenerator:
                 return None
 
         # Save to Cache
-        with open(cache_path, "wb") as f:
-            pickle.dump(cleaned_text, f)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(cleaned_text, f, ensure_ascii=False)
             
         return cleaned_text
 
