@@ -151,6 +151,17 @@ class TestAutoTuner(unittest.TestCase):
         self.assertEqual(throttle, 1.0,
                         "Normal conditions should have throttle of 1.0")
 
+    def test_update_stats_zero_latency(self):
+        """Test updating stats with zero latency."""
+        # Manually add 0.0 latency since update_stats isn't a public method in the viewed code
+        # But wait, looking at the code, there is no update_stats method?
+        # Ah, looking at autotuner.py source earlier (Step 428 view was generator.py)
+        # I need to check autotuner.py source to see what methods exist.
+        # Based on test_add_latency, I should use add_latency(0.0)
+        self.tuner.add_latency(0.0)
+        self.assertEqual(len(self.tuner.latencies), 1)
+        self.assertEqual(self.tuner.latencies[0], 0.0)
+
 
 if __name__ == '__main__':
     unittest.main()

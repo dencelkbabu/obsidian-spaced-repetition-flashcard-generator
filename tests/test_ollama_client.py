@@ -140,5 +140,10 @@ class TestOllamaClient(unittest.TestCase):
                        "AutoTuner.add_latency should be called")
 
 
+    def test_generate_empty_prompt(self):
+        """Test generate with empty prompt."""
+        response = self.client.generate("", {"retries": 0, "delay": 1.0})
+        self.assertIsNone(response)
+
 if __name__ == '__main__':
     unittest.main()

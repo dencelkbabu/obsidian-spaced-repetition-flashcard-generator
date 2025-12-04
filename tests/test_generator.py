@@ -154,5 +154,10 @@ The [[Accounting Equation]] is fundamental.
         self.assertIn("Accounting Equation", links)
 
 
+    def test_generate_single_empty_text(self):
+        """Test generate_single with empty text."""
+        result = self.generator.generate_single("", "test_empty")
+        self.assertIsNone(result)
+
 if __name__ == '__main__':
     unittest.main()

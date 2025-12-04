@@ -176,6 +176,32 @@ Question?
         self.assertIn("> **Explanation:**", result,
                      "Explanation should be a blockquote")
     
+    def test_clean_wikilinks_multiple(self):
+        """Test multiple wikilinks in one sentence."""
+        text = "Both [[Accounting]] and [[Finance]] are important."
+        expected = "Both Accounting and Finance are important."
+        result = self.cleaner.clean_wikilinks(text)
+        self.assertEqual(result, expected)
+
+    def test_clean_wikilinks_nested(self):
+        """Test nested brackets handling (should handle outer ones)."""
+        text = "See [[Topic [Advanced]]] for more."
+        # Regex might be greedy or not, let's see behavior. 
+        # Ideally it extracts "Topic [Advanced]"
+        # Current regex is `\[\[(.*?)(?:\|.*?)?\]\]`
+        # It will match `[[Topic [Advanced]]` -> `Topic [Advanced`
+        # Let's verify expected behavior or adjust test.
+        # If the cleaner uses non-greedy `.*?`, it stops at first `]]`.
+        # So `[[Topic [Advanced]]]` -> `Topic [Advanced` + `]`
+        expected = "See Topic [Advanced] for more."
+        result = self.cleaner.clean_wikilinks(text)
+        self.assertEqual(result, expected)
+
+    def test_clean_ai_output_empty(self):
+        """Test empty input for clean_ai_output."""
+        self.assertEqual(self.cleaner.clean_ai_output(""), "")
+        self.assertEqual(self.cleaner.clean_ai_output(None), "")
+
     def test_multiple_questions_cleaning(self):
         """Test cleaning multiple questions in one text."""
         text = """According to the text, Question 1?

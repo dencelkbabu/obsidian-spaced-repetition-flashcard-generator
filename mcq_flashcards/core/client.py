@@ -37,12 +37,13 @@ class OllamaClient:
         except requests.exceptions.RequestException:
             return False
 
-    def generate(self, prompt: str, worker_state: Dict[str, Any]) -> Optional[Dict]:
+    def generate(self, prompt: str, worker_state: Dict[str, Any], system: str = None) -> Optional[Dict]:
         """Generate text with exponential backoff and AutoTuner throttling.
         
         Args:
             prompt: Text prompt for generation
             worker_state: Dictionary tracking worker state (delay, retries)
+            system: Optional system prompt
             
         Returns:
             Response dictionary from Ollama API, or None if all retries failed
@@ -61,6 +62,9 @@ class OllamaClient:
                         "num_ctx": 8192
                     }
                 }
+                
+                if system:
+                    payload["system"] = system
                 
                 response = requests.post(self.base_url, json=payload, timeout=120)
                 latency = time.time() - start_time

@@ -32,6 +32,14 @@ from mcq_flashcards.core.config import (
 from mcq_flashcards.core.client import OllamaClient
 from mcq_flashcards.processing.cleaner import MCQCleaner
 from mcq_flashcards.processing.validator import MCQValidator
+from mcq_flashcards.core.prompts import (
+    PERSONAS,
+    BLOOM_INSTRUCTIONS,
+    DIFFICULTY_INSTRUCTIONS,
+    SYSTEM_PROMPT_TEMPLATE,
+    GENERATION_PROMPT_TEMPLATE,
+    REFINE_PROMPT_TEMPLATE
+)
 
 
 
@@ -67,15 +75,10 @@ class FlashcardGenerator:
         Returns:
             Tuple of (persona, focus) strings
         """
-        if "ACCT" in self.subject:
-            return "Strict Accounting Professor", "Focus on precise accounting standards (IFRS/GAAP). Distinguish clearly between Bookkeeping and Accounting."
-        elif "COMM" in self.subject:
-            return "Communication Expert", "Focus on business etiquette, theory, and precise terminology."
-        elif "MATH" in self.subject:
-            return "Mathematics Professor", "Focus on logic, formulas, and absolute precision."
-        elif "ECON" in self.subject:
-            return "Economics Professor", "Focus on micro/macro theories and standard economic definitions."
-        return "University Professor", "Focus on academic accuracy."
+        for key, (persona, focus) in PERSONAS.items():
+            if key in self.subject and key != "DEFAULT":
+                return persona, focus
+        return PERSONAS["DEFAULT"]
 
     def _get_bloom_instruction(self) -> str:
         """Get Bloom's taxonomy instruction for prompt.
@@ -85,16 +88,7 @@ class FlashcardGenerator:
         """
         if not self.config.bloom_level:
             return ""
-        
-        instructions = {
-            "remember": "COGNITIVE LEVEL: REMEMBER - Focus on RECALL and RECOGNITION. Ask about facts, terms, basic concepts, and definitions that can be directly retrieved from the text.",
-            "understand": "COGNITIVE LEVEL: UNDERSTAND - Focus on COMPREHENSION. Ask students to explain, summarize, interpret, or describe concepts in their own words.",
-            "apply": "COGNITIVE LEVEL: APPLY - Focus on APPLICATION. Ask students to use concepts, theories, or procedures in new situations or practical scenarios.",
-            "analyze": "COGNITIVE LEVEL: ANALYZE - Focus on ANALYSIS. Ask students to compare, contrast, categorize, or examine relationships between concepts.",
-            "evaluate": "COGNITIVE LEVEL: EVALUATE - Focus on EVALUATION. Ask students to judge, critique, assess, or justify decisions based on criteria.",
-            "create": "COGNITIVE LEVEL: CREATE - Focus on CREATION. Ask students to design, construct, formulate, or propose new solutions or approaches."
-        }
-        return instructions.get(self.config.bloom_level, "")
+        return BLOOM_INSTRUCTIONS.get(self.config.bloom_level, "")
 
     def _get_difficulty_instruction(self) -> str:
         """Get difficulty level instruction for prompt.
@@ -104,13 +98,7 @@ class FlashcardGenerator:
         """
         if not self.config.difficulty:
             return ""
-        
-        instructions = {
-            "easy": "DIFFICULTY: EASY - Use straightforward scenarios with common cases. Distractors should be clearly wrong to someone who studied. Focus on basic application of concepts.",
-            "medium": "DIFFICULTY: MEDIUM - Use realistic scenarios typical of exams. Distractors should be plausible but distinguishable with proper understanding. Standard exam difficulty.",
-            "hard": "DIFFICULTY: HARD - Use complex scenarios with edge cases. Distractors should be very plausible, requiring deep understanding to eliminate. Include tricky elements and subtle distinctions."
-        }
-        return instructions.get(self.config.difficulty, "")
+        return DIFFICULTY_INSTRUCTIONS.get(self.config.difficulty, "")
 
 
 
@@ -161,6 +149,26 @@ class FlashcardGenerator:
         except Exception:
             pass
 
+    def _construct_prompt(self, context: str, num_questions: int = 5) -> str:
+        """Construct the prompt for the LLM.
+        
+        Args:
+            context: The text content to generate questions from
+            num_questions: Number of questions to generate
+            
+        Returns:
+            Formatted prompt string
+        """
+        bloom = self._get_bloom_instruction()
+        difficulty = self._get_difficulty_instruction()
+        
+        return GENERATION_PROMPT_TEMPLATE.format(
+            context=context,
+            num_questions=num_questions,
+            bloom_instruction=bloom,
+            difficulty_instruction=difficulty
+        )
+
     def generate_single(self, text: str, name: str) -> Optional[str]:
         """Generate MCQs for a single piece of text.
         
@@ -182,40 +190,19 @@ class FlashcardGenerator:
             except (pickle.UnpicklingError, EOFError, FileNotFoundError):
                 pass  # Corrupt cache, ignore
 
-        # Prompt Construction
-        bloom_instruction = self._get_bloom_instruction()
-        bloom_section = f"\n{bloom_instruction}\n" if bloom_instruction else ""
+        # Construct Prompt
+        prompt = self._construct_prompt(text)
         
-        difficulty_instruction = self._get_difficulty_instruction()
-        difficulty_section = f"\n{difficulty_instruction}\n" if difficulty_instruction else ""
+        # Call LLM
+        system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
+            persona=self.persona,
+            focus=self.focus
+        )
         
-        prompt = f"""
-        You are a {self.persona}. {self.focus}
-        TASK: Generate 2 high-quality Multiple Choice Questions (MCQs) based STRICTLY on the text below.
-        {bloom_section}{difficulty_section}
-        CRITICAL RULES:
-        1. GROUNDING: Answer must be EXPLICITLY in the text.
-        2. DISTRACTORS: Plausible but undeniably wrong.
-        3. FORMAT: Use the EXACT format below.
-        
-        REQUIRED OUTPUT FORMAT:
-        Question text here?
-        1. Option 1
-        2. Option 2
-        3. Option 3
-        4. Option 4
-        ?
-        **Answer:** Correct Number) Full Correct Answer Text
-        > **Explanation:** Short explanation.
-
-        TEXT TO PROCESS:
-        {text[:MAX_PROMPT_LENGTH]}
-        """
-
         worker_state = {"delay": BASE_DELAY + random.uniform(0, 0.2), "retries": 0}
         
         # 1. Initial Generation
-        response = self.client.generate(prompt, worker_state)
+        response = self.client.generate(prompt, worker_state, system=system_prompt)
         if not response or 'response' not in response:
             return None
 
@@ -228,23 +215,7 @@ class FlashcardGenerator:
                 self.stats.refine_attempts += 1
             logger.info(f"⚠️  Invalid format for {name}. Attempting Self-Correction...")
             
-            refine_prompt = f"""
-            The previous output did not match the required MCQ format. 
-            Please REFORMAT the following content to match the exact format required.
-            
-            CONTENT TO FIX:
-            {cleaned_text}
-            
-            REQUIRED FORMAT:
-            Question?
-            1. Opt1
-            2. Opt2
-            3. Opt3
-            4. Opt4
-            ?
-            **Answer:** 1) Answer
-            > **Explanation:** Text
-            """
+            refine_prompt = REFINE_PROMPT_TEMPLATE.format(content=cleaned_text)
             
             refine_response = self.client.generate(refine_prompt, worker_state)
             if refine_response and 'response' in refine_response:
