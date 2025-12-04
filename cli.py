@@ -159,6 +159,43 @@ def select_week() -> Optional[int]:
     return int(week_in) if week_in.isdigit() else None
 
 
+def select_bloom_level() -> Optional[str]:
+    """Prompt user to select a Bloom's taxonomy level.
+    
+    Returns:
+        Bloom's level, or None for mixed levels
+    """
+    print(f"\n🎓 Bloom's Taxonomy Levels (optional):")
+    for i, level in enumerate(BLOOM_LEVELS, 1):
+        print(f"  {i}. {level.capitalize()}")
+    
+    bloom_input = input("\n🎯 Select Bloom's Level (number/name, or Enter for mixed): ").strip().lower()
+    
+    if not bloom_input:
+        return None
+    
+    # Try number selection
+    if bloom_input.isdigit():
+        idx = int(bloom_input) - 1
+        if 0 <= idx < len(BLOOM_LEVELS):
+            return BLOOM_LEVELS[idx]
+        else:
+            print("❌ Invalid number. Using mixed levels.")
+            return None
+    
+    # Try name selection
+    if bloom_input in BLOOM_LEVELS:
+        return bloom_input
+    
+    # Partial match
+    matches = [level for level in BLOOM_LEVELS if bloom_input in level]
+    if len(matches) == 1:
+        return matches[0]
+    
+    print("❌ Invalid level. Using mixed levels.")
+    return None
+
+
 def run_interactive() -> None:
     """Run in interactive production mode."""
     print(f"⚡ Flashcard Generator v{__version__}")
@@ -182,6 +219,9 @@ def run_interactive() -> None:
     # Week Selection
     week = select_week()
 
+    # Bloom's Level Selection
+    bloom_level = select_bloom_level()
+
     # Cache Clearing
     should_clear = input("\n🧹 Clear cache before processing? (y/n) [n]: ").strip().lower()
     if should_clear == 'y':
@@ -190,7 +230,7 @@ def run_interactive() -> None:
         clear_cache(subject_for_cache)
 
     # Execution
-    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False, bloom_level=args.bloom if hasattr(args, 'bloom') else None)
+    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False, bloom_level=bloom_level)
 
 
 def run_dev(args: argparse.Namespace) -> None:
