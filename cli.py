@@ -9,7 +9,7 @@ import os
 import requests
 
 from mcq_flashcards import __version__
-from mcq_flashcards.core.config import Config, CLASS_ROOT
+from mcq_flashcards.core.config import Config, BCOM_ROOT, DEFAULT_SEMESTER, get_semester_paths
 from mcq_flashcards.core.generator import FlashcardGenerator
 from mcq_flashcards.utils.power import WindowsInhibitor
 
@@ -25,10 +25,52 @@ def main():
         print("❌ Error: Ollama is not running.")
         return
 
-    # Interactive Inputs
-    print(f"\n📂 Available Subjects in {CLASS_ROOT}:")
+    # Semester Selection
+    print(f"\n📚 Available Semesters:")
     try:
-        all_subjects = [d.name for d in CLASS_ROOT.iterdir() if d.is_dir() and d.name != "Flashcards"]
+        semesters = [d.name for d in BCOM_ROOT.iterdir() 
+                     if d.is_dir() and d.name.startswith("Semester")]
+        if not semesters:
+            print("❌ No semesters found.")
+            return
+        
+        for i, sem in enumerate(semesters, 1):
+            print(f"  {i}. {sem}")
+    except Exception:
+        print("❌ Error reading semesters.")
+        return
+    
+    sem_input = input("\n📚 Select Semester (number or name, or Enter for default): ").strip()
+    
+    if not sem_input:
+        semester = DEFAULT_SEMESTER
+        print(f"   → Using default: {semester}")
+    elif sem_input.isdigit():
+        idx = int(sem_input) - 1
+        if 0 <= idx < len(semesters):
+            semester = semesters[idx]
+        else:
+            print("❌ Invalid semester number.")
+            return
+    else:
+        # Try to match by name
+        matches = [s for s in semesters if sem_input.lower() in s.lower()]
+        if len(matches) == 1:
+            semester = matches[0]
+        else:
+            print("❌ Invalid semester name.")
+            return
+    
+    # Get semester-specific paths
+    class_root, output_dir = get_semester_paths(semester)
+    
+    # Ensure output directory exists
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Interactive Inputs
+    print(f"\n📂 Available Subjects in {semester}:")
+    try:
+        all_subjects = [d.name for d in class_root.iterdir() if d.is_dir()]
         print(" | ".join(all_subjects))
     except Exception:
         print("❌ Error reading subjects.")
@@ -44,7 +86,7 @@ def main():
     target_subjects = []
     if subj_input == "ALL":
         target_subjects = all_subjects
-    elif (CLASS_ROOT / subj_input).exists():
+    elif (class_root / subj_input).exists():
         target_subjects = [subj_input]
     else:
         print("❌ Invalid subject.")
@@ -66,8 +108,8 @@ def main():
                 print(f"🔄 BATCH PROCESSING {i}/{len(target_subjects)}: {subject}")
                 print(f"{'='*40}")
             
-            cfg = Config()
-            gen = FlashcardGenerator(subject, cfg)
+            cfg = Config(semester=semester)
+            gen = FlashcardGenerator(subject, cfg, class_root, output_dir)
             gen.run(week)
         
         # Post-processing step
@@ -76,16 +118,15 @@ def main():
         print(f"{'='*40}")
         
         from mcq_flashcards.utils.postprocessor import post_process_flashcards
-        from mcq_flashcards.core.config import OUTPUT_DIR
         
-        stats = post_process_flashcards(OUTPUT_DIR, verbose=True)
+        stats = post_process_flashcards(output_dir, verbose=True)
         
         if stats['total_fixes'] > 0:
             print(f"\n✨ Post-processing complete! Fixed {stats['total_fixes']} issues across {stats['files_with_issues']} files.")
             
             # Verification pass - check if any issues remain
             print("\n🔍 Running verification pass...")
-            verify_stats = post_process_flashcards(OUTPUT_DIR, verbose=False)
+            verify_stats = post_process_flashcards(output_dir, verbose=False)
             
             if verify_stats['total_fixes'] > 0:
                 print(f"⚠️  Warning: {verify_stats['total_fixes']} issues still detected after post-processing!")

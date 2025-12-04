@@ -13,17 +13,34 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent
 VAULT_ROOT = SCRIPT_DIR.parent
 ACADEMICS_ROOT = VAULT_ROOT / "Academics"
-CLASS_ROOT = ACADEMICS_ROOT / r"BCom\Semester One"
+BCOM_ROOT = ACADEMICS_ROOT / "BCom"
 CONCEPT_SOURCE = ACADEMICS_ROOT / "Concepts"
-OUTPUT_DIR = ACADEMICS_ROOT / r"BCom\Flashcards"
+
+# Default semester
+DEFAULT_SEMESTER = "Semester One"
 
 # Working Directories
 CACHE_DIR = SCRIPT_DIR / "_cache"
 RAW_DIR = SCRIPT_DIR / "_raw_responses"
 ERROR_DIR = SCRIPT_DIR / "_errors"
 
+
+def get_semester_paths(semester_name: str):
+    """Get semester-specific paths for class root and output directory.
+    
+    Args:
+        semester_name: Name of the semester (e.g., "Semester One")
+        
+    Returns:
+        Tuple of (class_root, output_dir) paths
+    """
+    class_root = BCOM_ROOT / semester_name
+    output_dir = BCOM_ROOT / "Flashcards" / semester_name
+    return class_root, output_dir
+
+
 # Ensure directories exist
-for d in [CACHE_DIR, RAW_DIR, ERROR_DIR, OUTPUT_DIR]:
+for d in [CACHE_DIR, RAW_DIR, ERROR_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # --- DEFAULT SETTINGS ---
@@ -57,6 +74,7 @@ class Config:
     max_tokens: int = 1500
     start_week: int = 1
     end_week: int = 12
+    semester: str = DEFAULT_SEMESTER
 
 
 @dataclass

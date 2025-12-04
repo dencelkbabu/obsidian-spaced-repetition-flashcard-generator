@@ -21,9 +21,7 @@ from tqdm import tqdm
 from mcq_flashcards.core.config import (
     Config,
     ProcessingStats,
-    CLASS_ROOT,
     CONCEPT_SOURCE,
-    OUTPUT_DIR,
     CACHE_DIR,
     RAW_DIR,
     ERROR_DIR,
@@ -35,18 +33,23 @@ from mcq_flashcards.processing.cleaner import MCQCleaner
 from mcq_flashcards.processing.validator import MCQValidator
 
 
+
 class FlashcardGenerator:
     """Main flashcard generation orchestrator."""
     
-    def __init__(self, subject: str, config: Config):
+    def __init__(self, subject: str, config: Config, class_root: Path, output_dir: Path):
         """Initialize the flashcard generator.
         
         Args:
             subject: Subject code (e.g., 'ACCT1001')
             config: Configuration object
+            class_root: Path to semester's class root directory
+            output_dir: Path to output directory for flashcards
         """
         self.subject = subject.upper()
         self.config = config
+        self.class_root = class_root
+        self.output_dir = output_dir
         self.client = OllamaClient(config)
         self.cleaner = MCQCleaner()
         self.validator = MCQValidator()
@@ -54,7 +57,7 @@ class FlashcardGenerator:
         self.file_lock = threading.Lock()
         self.stats_lock = threading.Lock()
         
-        self.subject_path = CLASS_ROOT / self.subject
+        self.subject_path = self.class_root / self.subject
         self.persona, self.focus = self._get_persona()
 
     def _get_persona(self) -> Tuple[str, str]:
@@ -306,7 +309,7 @@ class FlashcardGenerator:
         
         out_name = f"{self.subject}_W{week:02d}_MCQ.md"
         tag = f"W{week:02d}"
-        out_path = OUTPUT_DIR / out_name
+        out_path = self.output_dir / out_name
         
         # Interactive Overwrite Check
         if out_path.exists():
