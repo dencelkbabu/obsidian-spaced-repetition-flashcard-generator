@@ -1,0 +1,417 @@
+"""Main flashcard generation logic.
+
+This module contains the FlashcardGenerator class which orchestrates
+the entire MCQ generation process from lecture notes.
+"""
+
+import concurrent.futures
+import hashlib
+import json
+import pickle
+import random
+import re
+import threading
+import traceback
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
+
+from tqdm import tqdm
+
+from mcq_flashcards.core.config import (
+    Config,
+    ProcessingStats,
+    CLASS_ROOT,
+    CONCEPT_SOURCE,
+    OUTPUT_DIR,
+    CACHE_DIR,
+    RAW_DIR,
+    ERROR_DIR,
+    BASE_DELAY,
+    logger,
+)
+from mcq_flashcards.core.client import OllamaClient
+from mcq_flashcards.processing.cleaner import MCQCleaner
+from mcq_flashcards.processing.validator import MCQValidator
+
+
+class FlashcardGenerator:
+    """Main flashcard generation orchestrator."""
+    
+    def __init__(self, subject: str, config: Config):
+        """Initialize the flashcard generator.
+        
+        Args:
+            subject: Subject code (e.g., 'ACCT1001')
+            config: Configuration object
+        """
+        self.subject = subject.upper()
+        self.config = config
+        self.client = OllamaClient(config)
+        self.cleaner = MCQCleaner()
+        self.validator = MCQValidator()
+        self.stats = ProcessingStats()
+        self.file_lock = threading.Lock()
+        self.stats_lock = threading.Lock()
+        
+        self.subject_path = CLASS_ROOT / self.subject
+        self.persona, self.focus = self._get_persona()
+
+    def _get_persona(self) -> Tuple[str, str]:
+        """Get subject-specific persona and focus for prompt engineering.
+        
+        Returns:
+            Tuple of (persona, focus) strings
+        """
+        if "ACCT" in self.subject:
+            return "Strict Accounting Professor", "Focus on precise accounting standards (IFRS/GAAP). Distinguish clearly between Bookkeeping and Accounting."
+        elif "COMM" in self.subject:
+            return "Communication Expert", "Focus on business etiquette, theory, and precise terminology."
+        elif "MATH" in self.subject:
+            return "Mathematics Professor", "Focus on logic, formulas, and absolute precision."
+        elif "ECON" in self.subject:
+            return "Economics Professor", "Focus on micro/macro theories and standard economic definitions."
+        return "University Professor", "Focus on academic accuracy."
+
+    def get_cache_key(self, text: str) -> Path:
+        """Generate cache key for a given text.
+        
+        Args:
+            text: Input text to cache
+            
+        Returns:
+            Path to cache file
+        """
+        combined = f"{self.config.model}_{text}"
+        return CACHE_DIR / f"{hashlib.md5(combined.encode()).hexdigest()}.pkl"
+
+    def _save_raw_log(self, name: str, data: any, suffix: str = ""):
+        """Save raw API response for debugging.
+        
+        Args:
+            name: Name for the log file
+            data: Data to save
+            suffix: Optional suffix for filename
+        """
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{timestamp}_{name}{suffix}.json"
+            clean_name = re.sub(r'[\\/*?:"<>|]', "", filename)  # Sanitize
+            with open(RAW_DIR / clean_name, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.warning(f"Failed to save raw log: {e}")
+
+    def _save_error_log(self, name: str, error: str, context: str):
+        """Save error log for debugging.
+        
+        Args:
+            name: Name for the error log
+            error: Error message
+            context: Additional context (e.g., stack trace)
+        """
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"ERROR_{timestamp}_{name}.txt"
+            clean_name = re.sub(r'[\\/*?:"<>|]', "", filename)
+            with open(ERROR_DIR / clean_name, 'w', encoding='utf-8') as f:
+                f.write(f"Error: {error}\n\nContext:\n{context}")
+        except Exception:
+            pass
+
+    def generate_single(self, text: str, name: str) -> Optional[str]:
+        """Generate MCQs for a single piece of text.
+        
+        Args:
+            text: Source text to generate MCQs from
+            name: Name for logging/caching
+            
+        Returns:
+            Generated MCQ text, or None if generation failed
+        """
+        # Check Cache
+        cache_path = self.get_cache_key(text)
+        if cache_path.exists():
+            try:
+                with open(cache_path, "rb") as f:
+                    with self.stats_lock:
+                        self.stats.cache_hits += 1
+                    return pickle.load(f)
+            except Exception:
+                pass  # Corrupt cache, ignore
+
+        # Prompt Construction
+        prompt = f"""
+        You are a {self.persona}. {self.focus}
+        TASK: Generate 2 high-quality Multiple Choice Questions (MCQs) based STRICTLY on the text below.
+        
+        CRITICAL RULES:
+        1. GROUNDING: Answer must be EXPLICITLY in the text.
+        2. DISTRACTORS: Plausible but undeniably wrong.
+        3. FORMAT: Use the EXACT format below.
+        
+        REQUIRED OUTPUT FORMAT:
+        Question text here?
+        1. Option 1
+        2. Option 2
+        3. Option 3
+        4. Option 4
+        ?
+        **Answer:** Correct Number) Full Correct Answer Text
+        > **Explanation:** Short explanation.
+
+        TEXT TO PROCESS:
+        {text[:6000]}
+        """
+
+        worker_state = {"delay": BASE_DELAY + random.uniform(0, 0.2), "retries": 0}
+        
+        # 1. Initial Generation
+        response = self.client.generate(prompt, worker_state)
+        if not response or 'response' not in response:
+            return None
+
+        self._save_raw_log(name, response, "_raw")
+        cleaned_text = self.cleaner.clean_ai_output(response['response'])
+
+        # 2. Validation & Refine Pass
+        if not self.validator.validate(cleaned_text):
+            with self.stats_lock:
+                self.stats.refine_attempts += 1
+            logger.info(f"⚠️  Invalid format for {name}. Attempting Self-Correction...")
+            
+            refine_prompt = f"""
+            The previous output did not match the required MCQ format. 
+            Please REFORMAT the following content to match the exact format required.
+            
+            CONTENT TO FIX:
+            {cleaned_text}
+            
+            REQUIRED FORMAT:
+            Question?
+            1. Opt1
+            2. Opt2
+            3. Opt3
+            4. Opt4
+            ?
+            **Answer:** 1) Answer
+            > **Explanation:** Text
+            """
+            
+            refine_response = self.client.generate(refine_prompt, worker_state)
+            if refine_response and 'response' in refine_response:
+                self._save_raw_log(name, refine_response, "_refine")
+                cleaned_refine = self.cleaner.clean_ai_output(refine_response['response'])
+                
+                if self.validator.validate(cleaned_refine):
+                    with self.stats_lock:
+                        self.stats.refine_success += 1
+                    cleaned_text = cleaned_refine  # Success!
+                else:
+                    self._save_error_log(name, "Validation Failed after Refine", cleaned_refine)
+                    return None
+            else:
+                return None
+
+        # Save to Cache
+        with open(cache_path, "wb") as f:
+            pickle.dump(cleaned_text, f)
+            
+        return cleaned_text
+
+    def process_item(self, args) -> Optional[str]:
+        """Process a single item (lecture or concept).
+        
+        Args:
+            args: Tuple of (text, name, is_concept)
+            
+        Returns:
+            Formatted MCQ section, or None if processing failed
+        """
+        text, name, is_concept = args
+        if len(text) < 20:
+            return None
+
+        try:
+            result = self.generate_single(text, name)
+            if result:
+                with self.stats_lock:
+                    self.stats.successful_cards += 1
+                    if is_concept:
+                        self.stats.processed_concepts += 1
+                    else:
+                        self.stats.processed_files += 1
+                
+                if is_concept:
+                    return f"### Concept: {name}\n\n{result}\n\n---\n"
+                else:
+                    clean_name = name.replace('.md', '')
+                    return f"### {clean_name}\n\n{result}\n\n---\n"
+            else:
+                with self.stats_lock:
+                    self.stats.failed_cards += 1
+                return None
+        except Exception as e:
+            with self.stats_lock:
+                self.stats.failed_cards += 1
+            self._save_error_log(name, str(e), traceback.format_exc())
+            return None
+
+    def extract_summary(self, file_path: Path) -> Tuple[Optional[str], Set[str]]:
+        """Extract summary and wikilinks from a markdown file.
+        
+        Args:
+            file_path: Path to markdown file
+            
+        Returns:
+            Tuple of (summary_text, set_of_wikilinks)
+        """
+        try:
+            content = file_path.read_text(encoding='utf-8')
+            patterns = [
+                r'##\s*Key Concepts.*?\n(.*?)(?=\n##|\Z)',
+                r'##\s*Key\s+Concepts.*?\n(.*?)(?=\n##|\Z)',
+                r'###\s*Key Concepts.*?\n(.*?)(?=\n##|\Z)',
+                r'#\s*Key Concepts.*?\n(.*?)(?=\n#|\Z)'
+            ]
+            summary = None
+            for pattern in patterns:
+                match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+                if match:
+                    summary = self.cleaner.clean_wikilinks(match.group(1).strip())
+                    break
+            
+            if not summary:
+                summary = self.cleaner.clean_wikilinks(content)
+            
+            # Regex to capture the filename part of a wikilink
+            # Matches [[Filename]] or [[Filename|Alias]] or [[Filename#Anchor]]
+            # Group 1 is the Filename
+            links = re.findall(r'\[\[([^|#\]]+)(?:[|#][^\]]+)?\]\]', content)
+            cleaned_links = {link.strip() for link in links}
+            return summary, cleaned_links
+        except Exception:
+            return None, set()
+
+    def process_week(self, week: int, files: List[Path], limit: int):
+        """Process all files for a given week.
+        
+        Args:
+            week: Week number
+            files: List of markdown files for this week
+            limit: Limit on number of concepts to process (0 = no limit)
+        """
+        # Reset Stats for this week
+        self.stats = ProcessingStats()
+        
+        out_name = f"{self.subject}_W{week:02d}_MCQ.md"
+        tag = f"W{week:02d}"
+        out_path = OUTPUT_DIR / out_name
+        
+        # Interactive Overwrite Check
+        if out_path.exists():
+            print(f"\n⚠️  {out_name} exists.")
+            if input("   Overwrite? (y/n): ").lower() != 'y':
+                print("   Skipping...")
+                return
+
+        # Write Header
+        with open(out_path, 'w', encoding='utf-8') as f:
+            f.write(f"---\ntags:\n- flashcard/{self.subject}/{tag}\n---\n")
+            f.write(f"## MCQs: {self.subject} - {tag}\n\n")
+
+        self.stats.total_files = len(files)
+        
+        # Prepare Lecture Jobs
+        lecture_jobs = []
+        concepts_set = set()
+        
+        print(f"\n📝 Extracting content for Week {week}...")
+        for p in tqdm(files):
+            summary, links = self.extract_summary(p)
+            concepts_set.update(links)
+            if summary:
+                lecture_jobs.append((summary, p.name, False))
+
+        # Prepare Concept Jobs
+        concept_jobs = []
+        self.stats.total_concepts = len(concepts_set)
+        c_list = list(concepts_set)
+        if limit > 0:
+            c_list = c_list[:limit]
+        
+        for c in c_list:
+            cp = CONCEPT_SOURCE / f"{c}.md"
+            if cp.exists():
+                s, _ = self.extract_summary(cp)
+                if s:
+                    concept_jobs.append((s, c, True))
+
+        # Execute
+        all_jobs = lecture_jobs + concept_jobs
+        print(f"🚀 Processing {len(all_jobs)} items with {self.config.workers} workers...")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.workers) as executor:
+            futures = [executor.submit(self.process_item, job) for job in all_jobs]
+            
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Generating"):
+                result = future.result()
+                if result:
+                    with self.file_lock:
+                        with open(out_path, 'a', encoding='utf-8') as f:
+                            f.write(result)
+
+        # Final Report for Week
+        print(f"🎉 DONE! Output: {out_name}")
+        print(f"📊 Statistics for Week {week}:")
+        print(f"   Files: {self.stats.processed_files}/{self.stats.total_files}")
+        print(f"   Concepts: {self.stats.processed_concepts}/{self.stats.total_concepts}")
+        print(f"   Success: {self.stats.successful_cards} | Failed: {self.stats.failed_cards}")
+        print(f"   Cache Hits: {self.stats.cache_hits}")
+        print(f"   Self-Corrections: {self.stats.refine_success}/{self.stats.refine_attempts}")
+
+    def run(self, target_week: Optional[int], limit: int = 0):
+        """Run the flashcard generation process.
+        
+        Args:
+            target_week: Specific week to process, or None for all weeks
+            limit: Limit on concepts per week (0 = no limit)
+        """
+        if not self.client.check_connection():
+            print("❌ Ollama not reachable. Start with 'ollama serve'.")
+            return
+
+        # 1. Scan and Group Files by Week
+        week_files: Dict[int, List[Path]] = {}
+        target_dirs = [self.subject_path / d for d in ["Recorded Lectures", "Live Lectures"] if (self.subject_path / d).exists()]
+        
+        print(f"\n🔍 Scanning {self.subject}...")
+        for d in target_dirs:
+            for p in d.rglob("*.md"):
+                match = re.search(r'(?:W|Week)\s?0?(\d+)', p.name, re.IGNORECASE)
+                if match:
+                    wk = int(match.group(1))
+                    
+                    # Filter if specific week requested
+                    if target_week and wk != target_week:
+                        continue
+                    
+                    # Filter by config range
+                    if not target_week and not (self.config.start_week <= wk <= self.config.end_week):
+                        continue
+                    
+                    if wk not in week_files:
+                        week_files[wk] = []
+                    week_files[wk].append(p)
+
+        if not week_files:
+            print("❌ No files found.")
+            return
+
+        # 2. Process Each Week
+        sorted_weeks = sorted(week_files.keys())
+        print(f"📅 Found weeks: {', '.join(map(str, sorted_weeks))}")
+        print(f"   (AutoTuner Active: Monitoring GPU & Errors)")
+        
+        for wk in sorted_weeks:
+            self.process_week(wk, week_files[wk], limit)
