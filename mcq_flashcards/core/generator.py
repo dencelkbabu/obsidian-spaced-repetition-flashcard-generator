@@ -11,6 +11,7 @@ import pickle
 import random
 import re
 import threading
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -256,6 +257,7 @@ class FlashcardGenerator:
             if result:
                 with self.stats_lock:
                     self.stats.successful_cards += 1
+                    self.stats.total_questions += QUESTIONS_PER_PROMPT
                     if is_concept:
                         self.stats.processed_concepts += 1
                     else:
@@ -323,6 +325,7 @@ class FlashcardGenerator:
         """
         # Reset Stats for this week
         self.stats = ProcessingStats()
+        self.stats.start_time = time.time()
         
         # Build filename with optional Bloom's level and difficulty
         bloom_suffix = f"_{self.config.bloom_level}" if self.config.bloom_level else ""
@@ -395,6 +398,7 @@ class FlashcardGenerator:
                             f.write(result)
 
         # Final Report for Week
+        self.stats.end_time = time.time()
         print(f"🎉 DONE! Output: {out_name}")
         print(f"📊 Statistics for Week {week}:")
         print(f"   Files: {self.stats.processed_files}/{self.stats.total_files}")
@@ -402,6 +406,7 @@ class FlashcardGenerator:
         print(f"   Success: {self.stats.successful_cards} | Failed: {self.stats.failed_cards}")
         print(f"   Cache Hits: {self.stats.cache_hits}")
         print(f"   Self-Corrections: {self.stats.refine_success}/{self.stats.refine_attempts}")
+        print(f"   ⏱️  Time: {self.stats.duration:.1f}s ({self.stats.questions_per_minute:.1f} Q/min)")
 
     def run(self, target_week: Optional[int], limit: int = 0):
         """Run the flashcard generation process.

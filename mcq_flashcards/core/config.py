@@ -4,6 +4,7 @@ This module defines configuration settings, path constants, and
 data structures used throughout the application.
 """
 
+import time
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -178,3 +179,21 @@ class ProcessingStats:
     processed_concepts: int = 0
     refine_attempts: int = 0
     refine_success: int = 0
+    start_time: float = 0.0
+    end_time: float = 0.0
+    total_questions: int = 0
+    
+    @property
+    def duration(self) -> float:
+        if self.end_time > 0:
+            return self.end_time - self.start_time
+        elif self.start_time > 0:
+            return time.time() - self.start_time
+        return 0.0
+        
+    @property
+    def questions_per_minute(self) -> float:
+        d = self.duration
+        if d > 0:
+            return (self.total_questions / d) * 60
+        return 0.0
