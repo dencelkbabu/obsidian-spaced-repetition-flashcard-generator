@@ -69,6 +69,15 @@ DEFAULT_BLOOM_LEVEL = None  # None = mixed levels
 DIFFICULTY_LEVELS = ["easy", "medium", "hard"]
 DEFAULT_DIFFICULTY = None  # None = mixed difficulty
 
+# --- STUDY MODE PRESETS ---
+PRESETS = {
+    "exam": {"bloom": "apply", "difficulty": "medium", "description": "Exam Prep (Apply + Medium) - Recommended for exam revision"},
+    "review": {"bloom": "remember", "difficulty": "easy", "description": "Quick Review (Remember + Easy) - Fast recall practice"},
+    "deep": {"bloom": "analyze", "difficulty": "hard", "description": "Deep Study (Analyze + Hard) - Advanced understanding"},
+    "mixed": {"bloom": None, "difficulty": None, "description": "Mixed (Random levels) - Varied practice"},
+}
+DEFAULT_PRESET = "exam"  # Default to exam prep
+
 # --- LOGGING SETUP ---
 logging.basicConfig(
     level=logging.INFO,

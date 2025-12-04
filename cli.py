@@ -21,6 +21,7 @@ from mcq_flashcards.core.config import (
     CACHE_DIR,
     BLOOM_LEVELS,
     DIFFICULTY_LEVELS,
+    PRESETS,
 )
 from mcq_flashcards.core.generator import FlashcardGenerator
 from mcq_flashcards.utils.power import WindowsInhibitor
@@ -160,13 +161,57 @@ def select_week() -> Optional[int]:
     return int(week_in) if week_in.isdigit() else None
 
 
-def select_bloom_level() -> Optional[str]:
-    """Prompt user to select a Bloom's taxonomy level.
+def select_preset() -> tuple[Optional[str], Optional[str]]:
+    """Prompt user to select a study mode preset.
     
     Returns:
-        Bloom's level, or None for mixed levels
+        Tuple of (bloom_level, difficulty)
     """
-    print(f"\n🎓 Bloom's Taxonomy Levels (optional):")
+    print(f"\n🎯 Select Study Mode:")
+    print(f"  1. {PRESETS['exam']['description']}")
+    print(f"  2. {PRESETS['review']['description']}")
+    print(f"  3. {PRESETS['deep']['description']}")
+    print(f"  4. {PRESETS['mixed']['description']}")
+    print(f"  5. Custom (Advanced - Choose Bloom's + Difficulty manually)")
+    
+    preset_input = input("\nSelect mode (1-5, or Enter for Exam Prep): ").strip()
+    
+    # Default to exam prep
+    if not preset_input:
+        preset = PRESETS["exam"]
+        print("   → Using: Exam Prep (Apply + Medium)")
+        return preset["bloom"], preset["difficulty"]
+    
+    # Map number to preset
+    preset_map = {
+        "1": "exam",
+        "2": "review",
+        "3": "deep",
+        "4": "mixed",
+    }
+    
+    if preset_input in preset_map:
+        preset_key = preset_map[preset_input]
+        preset = PRESETS[preset_key]
+        print(f"   → Using: {preset['description'].split(' - ')[0]}")
+        return preset["bloom"], preset["difficulty"]
+    
+    # Custom option
+    if preset_input == "5":
+        print("\n📚 Custom Mode - Select Bloom's and Difficulty:")
+        bloom = select_bloom_level_custom()
+        difficulty = select_difficulty_custom()
+        return bloom, difficulty
+    
+    # Invalid input, default to exam prep
+    print("❌ Invalid selection. Using Exam Prep.")
+    preset = PRESETS["exam"]
+    return preset["bloom"], preset["difficulty"]
+
+
+def select_bloom_level_custom() -> Optional[str]:
+    """Prompt user to select Bloom's level (for custom mode only)."""
+    print(f"\n🎓 Bloom's Taxonomy Levels:")
     for i, level in enumerate(BLOOM_LEVELS, 1):
         print(f"  {i}. {level.capitalize()}")
     
@@ -175,35 +220,24 @@ def select_bloom_level() -> Optional[str]:
     if not bloom_input:
         return None
     
-    # Try number selection
     if bloom_input.isdigit():
         idx = int(bloom_input) - 1
         if 0 <= idx < len(BLOOM_LEVELS):
             return BLOOM_LEVELS[idx]
-        else:
-            print("❌ Invalid number. Using mixed levels.")
-            return None
     
-    # Try name selection
     if bloom_input in BLOOM_LEVELS:
         return bloom_input
     
-    # Partial match
     matches = [level for level in BLOOM_LEVELS if bloom_input in level]
     if len(matches) == 1:
         return matches[0]
     
-    print("❌ Invalid level. Using mixed levels.")
     return None
 
 
-def select_difficulty() -> Optional[str]:
-    """Prompt user to select a difficulty level.
-    
-    Returns:
-        Difficulty level, or None for mixed difficulty
-    """
-    print(f"\n💪 Difficulty Levels (optional):")
+def select_difficulty_custom() -> Optional[str]:
+    """Prompt user to select difficulty (for custom mode only)."""
+    print(f"\n💪 Difficulty Levels:")
     for i, level in enumerate(DIFFICULTY_LEVELS, 1):
         print(f"  {i}. {level.capitalize()}")
     
@@ -212,25 +246,18 @@ def select_difficulty() -> Optional[str]:
     if not diff_input:
         return None
     
-    # Try number selection
     if diff_input.isdigit():
         idx = int(diff_input) - 1
         if 0 <= idx < len(DIFFICULTY_LEVELS):
             return DIFFICULTY_LEVELS[idx]
-        else:
-            print("❌ Invalid number. Using mixed difficulty.")
-            return None
     
-    # Try name selection
     if diff_input in DIFFICULTY_LEVELS:
         return diff_input
     
-    # Partial match
     matches = [level for level in DIFFICULTY_LEVELS if diff_input in level]
     if len(matches) == 1:
         return matches[0]
     
-    print("❌ Invalid difficulty. Using mixed difficulty.")
     return None
 
 
@@ -257,11 +284,8 @@ def run_interactive() -> None:
     # Week Selection
     week = select_week()
 
-    # Bloom's Level Selection
-    bloom_level = select_bloom_level()
-
-    # Difficulty Selection
-    difficulty = select_difficulty()
+    # Study Mode Preset Selection
+    bloom_level, difficulty = select_preset()
 
     # Cache Clearing
     should_clear = input("\n🧹 Clear cache before processing? (y/n) [n]: ").strip().lower()
