@@ -96,6 +96,23 @@ class FlashcardGenerator:
         }
         return instructions.get(self.config.bloom_level, "")
 
+    def _get_difficulty_instruction(self) -> str:
+        """Get difficulty level instruction for prompt.
+        
+        Returns:
+            Difficulty instruction, or empty string if no difficulty specified
+        """
+        if not self.config.difficulty:
+            return ""
+        
+        instructions = {
+            "easy": "DIFFICULTY: EASY - Use straightforward scenarios with common cases. Distractors should be clearly wrong to someone who studied. Focus on basic application of concepts.",
+            "medium": "DIFFICULTY: MEDIUM - Use realistic scenarios typical of exams. Distractors should be plausible but distinguishable with proper understanding. Standard exam difficulty.",
+            "hard": "DIFFICULTY: HARD - Use complex scenarios with edge cases. Distractors should be very plausible, requiring deep understanding to eliminate. Include tricky elements and subtle distinctions."
+        }
+        return instructions.get(self.config.difficulty, "")
+
+
 
     def get_cache_key(self, text: str) -> Path:
         """Generate cache key for a given text.
@@ -169,10 +186,13 @@ class FlashcardGenerator:
         bloom_instruction = self._get_bloom_instruction()
         bloom_section = f"\n{bloom_instruction}\n" if bloom_instruction else ""
         
+        difficulty_instruction = self._get_difficulty_instruction()
+        difficulty_section = f"\n{difficulty_instruction}\n" if difficulty_instruction else ""
+        
         prompt = f"""
         You are a {self.persona}. {self.focus}
         TASK: Generate 2 high-quality Multiple Choice Questions (MCQs) based STRICTLY on the text below.
-        {bloom_section}
+        {bloom_section}{difficulty_section}
         CRITICAL RULES:
         1. GROUNDING: Answer must be EXPLICITLY in the text.
         2. DISTRACTORS: Plausible but undeniably wrong.
@@ -333,9 +353,10 @@ class FlashcardGenerator:
         # Reset Stats for this week
         self.stats = ProcessingStats()
         
-        # Build filename with optional Bloom's level
+        # Build filename with optional Bloom's level and difficulty
         bloom_suffix = f"_{self.config.bloom_level}" if self.config.bloom_level else ""
-        out_name = f"{self.subject}_W{week:02d}_MCQ{bloom_suffix}.md"
+        diff_suffix = f"_{self.config.difficulty}" if self.config.difficulty else ""
+        out_name = f"{self.subject}_W{week:02d}_MCQ{bloom_suffix}{diff_suffix}.md"
         tag = f"W{week:02d}"
         
         # Dev Mode Handling
@@ -343,7 +364,7 @@ class FlashcardGenerator:
             # Use _dev subdirectory and append suffix
             dev_dir = self.output_dir.parent / "_dev"
             dev_dir.mkdir(parents=True, exist_ok=True)
-            out_name = f"{self.subject}_W{week:02d}_MCQ{bloom_suffix}_dev.md"
+            out_name = f"{self.subject}_W{week:02d}_MCQ{bloom_suffix}{diff_suffix}_dev.md"
             out_path = dev_dir / out_name
             # Auto-overwrite in dev mode (no prompt)
         else:

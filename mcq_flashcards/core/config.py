@@ -65,6 +65,10 @@ MAX_METRICS_HISTORY = 50  # Maximum number of latency/error samples to keep
 BLOOM_LEVELS = ["remember", "understand", "apply", "analyze", "evaluate", "create"]
 DEFAULT_BLOOM_LEVEL = None  # None = mixed levels
 
+# --- DIFFICULTY LEVELS ---
+DIFFICULTY_LEVELS = ["easy", "medium", "hard"]
+DEFAULT_DIFFICULTY = None  # None = mixed difficulty
+
 # --- LOGGING SETUP ---
 logging.basicConfig(
     level=logging.INFO,
@@ -89,6 +93,7 @@ class Config:
     semester: str = DEFAULT_SEMESTER
     dev_mode: bool = False
     bloom_level: Optional[str] = None  # Target Bloom's taxonomy level
+    difficulty: Optional[str] = None  # Target difficulty level
 
 
 @dataclass

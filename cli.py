@@ -20,6 +20,7 @@ from mcq_flashcards.core.config import (
     get_semester_paths,
     CACHE_DIR,
     BLOOM_LEVELS,
+    DIFFICULTY_LEVELS,
 )
 from mcq_flashcards.core.generator import FlashcardGenerator
 from mcq_flashcards.utils.power import WindowsInhibitor
@@ -196,6 +197,43 @@ def select_bloom_level() -> Optional[str]:
     return None
 
 
+def select_difficulty() -> Optional[str]:
+    """Prompt user to select a difficulty level.
+    
+    Returns:
+        Difficulty level, or None for mixed difficulty
+    """
+    print(f"\n💪 Difficulty Levels (optional):")
+    for i, level in enumerate(DIFFICULTY_LEVELS, 1):
+        print(f"  {i}. {level.capitalize()}")
+    
+    diff_input = input("\n🎯 Select Difficulty (number/name, or Enter for mixed): ").strip().lower()
+    
+    if not diff_input:
+        return None
+    
+    # Try number selection
+    if diff_input.isdigit():
+        idx = int(diff_input) - 1
+        if 0 <= idx < len(DIFFICULTY_LEVELS):
+            return DIFFICULTY_LEVELS[idx]
+        else:
+            print("❌ Invalid number. Using mixed difficulty.")
+            return None
+    
+    # Try name selection
+    if diff_input in DIFFICULTY_LEVELS:
+        return diff_input
+    
+    # Partial match
+    matches = [level for level in DIFFICULTY_LEVELS if diff_input in level]
+    if len(matches) == 1:
+        return matches[0]
+    
+    print("❌ Invalid difficulty. Using mixed difficulty.")
+    return None
+
+
 def run_interactive() -> None:
     """Run in interactive production mode."""
     print(f"⚡ Flashcard Generator v{__version__}")
@@ -222,6 +260,9 @@ def run_interactive() -> None:
     # Bloom's Level Selection
     bloom_level = select_bloom_level()
 
+    # Difficulty Selection
+    difficulty = select_difficulty()
+
     # Cache Clearing
     should_clear = input("\n🧹 Clear cache before processing? (y/n) [n]: ").strip().lower()
     if should_clear == 'y':
@@ -230,7 +271,7 @@ def run_interactive() -> None:
         clear_cache(subject_for_cache)
 
     # Execution
-    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False, bloom_level=bloom_level)
+    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False, bloom_level=bloom_level, difficulty=difficulty)
 
 
 def run_dev(args: argparse.Namespace) -> None:
@@ -294,10 +335,10 @@ def run_dev(args: argparse.Namespace) -> None:
 
     # Execution
     print(f"\n📂 Processing: {subject} - Week {week if week else 'ALL'} - {semester}")
-    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=True, bloom_level=args.bloom)
+    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=True, bloom_level=args.bloom, difficulty=args.difficulty)
 
 
-def execute_generation(subjects: List[str], semester: str, class_root: Path, output_dir: Path, week: Optional[int], dev_mode: bool = False, bloom_level: Optional[str] = None):
+def execute_generation(subjects: List[str], semester: str, class_root: Path, output_dir: Path, week: Optional[int], dev_mode: bool = False, bloom_level: Optional[str] = None, difficulty: Optional[str] = None):
     """Common execution logic for both modes."""
     os_inhibitor = None
     if os.name == 'nt':
@@ -311,7 +352,7 @@ def execute_generation(subjects: List[str], semester: str, class_root: Path, out
                 print(f"🔄 BATCH PROCESSING {i}/{len(subjects)}: {subject}")
                 print(f"{'='*40}")
             
-            cfg = Config(semester=semester, dev_mode=dev_mode, bloom_level=bloom_level)
+            cfg = Config(semester=semester, dev_mode=dev_mode, bloom_level=bloom_level, difficulty=difficulty)
             gen = FlashcardGenerator(subject, cfg, class_root, output_dir)
             gen.run(week)
         
@@ -358,6 +399,7 @@ def main() -> None:
     parser.add_argument("-c", "--clear-cache", action="store_true", help="Clear cache before processing")
     parser.add_argument("--deep-clear", action="store_true", help="Only clear cache and exit (requires -d)")
     parser.add_argument("--bloom", choices=BLOOM_LEVELS, help="Target Bloom's taxonomy level")
+    parser.add_argument("--difficulty", choices=DIFFICULTY_LEVELS, help="Target difficulty level")
     parser.add_argument("-s", "--semester", help="Override semester (Dev mode)")
     parser.add_argument("-w", "--week-flag", dest="week_flag", help="Override week (Alternative flag)")
 
