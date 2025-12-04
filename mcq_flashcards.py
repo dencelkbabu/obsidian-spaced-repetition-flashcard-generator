@@ -608,7 +608,7 @@ class FlashcardGenerator:
 # --- CLI ENTRY POINT ---
 
 def main():
-    print("⚡ Flashcard Generator v2.5")
+    print("⚡ Flashcard Generator v2.6")
     
     # Check Ollama First
     try:
