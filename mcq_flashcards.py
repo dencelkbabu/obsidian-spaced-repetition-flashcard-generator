@@ -608,7 +608,7 @@ class FlashcardGenerator:
 # --- CLI ENTRY POINT ---
 
 def main():
-    print("⚡ Flashcard Generator v2.0.0 (AutoTuner + Refine)")
+    print("⚡ Flashcard Generator v2.5 (AutoTuner + Refine)")
     
     # Check Ollama First
     try:
