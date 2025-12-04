@@ -80,7 +80,7 @@ class OllamaClient:
                 AUTOTUNER.add_error()
                 # Log only if it's the last retry
                 if attempt == MAX_RETRIES - 1:
-                    logger.debug(f"Request failed: {e}")
+                    logger.error(f"Request failed after {MAX_RETRIES} attempts: {e}")
 
             # Backoff Logic
             worker_state["retries"] += 1

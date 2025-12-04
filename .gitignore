@@ -19,6 +19,8 @@ Thumbs.db
 # Logs & Debug
 _errors/
 _raw_responses/
+_logs/
+*.log
 _scripts.code-workspace
 
 # Test artifacts

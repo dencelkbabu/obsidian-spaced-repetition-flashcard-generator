@@ -79,12 +79,49 @@ PRESETS = {
 DEFAULT_PRESET = "exam"  # Default to exam prep
 
 # --- LOGGING SETUP ---
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()]
-)
-logger = logging.getLogger("FlashcardGen")
+from logging.handlers import RotatingFileHandler
+
+LOG_DIR = SCRIPT_DIR / "_logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / "flashcard_gen.log"
+
+def setup_logging(level=logging.INFO):
+    """Configure logging with rotation.
+    
+    Args:
+        level: Logging level (default: INFO)
+        
+    Returns:
+        Configured logger instance
+    """
+    # Create handlers
+    file_handler = RotatingFileHandler(
+        LOG_FILE, 
+        maxBytes=5*1024*1024,  # 5 MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    console_handler = logging.StreamHandler()
+    
+    # Create formatter
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Configure root logger
+    root = logging.getLogger()
+    root.setLevel(level)
+    
+    # Remove existing handlers to avoid duplicates
+    if root.hasHandlers():
+        root.handlers.clear()
+        
+    root.addHandler(file_handler)
+    root.addHandler(console_handler)
+    
+    return logging.getLogger("FlashcardGen")
+
+logger = setup_logging()
 
 
 # --- DATA STRUCTURES ---
