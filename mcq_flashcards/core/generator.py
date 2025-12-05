@@ -7,10 +7,12 @@ the entire MCQ generation process from lecture notes.
 import concurrent.futures
 import hashlib
 import json
+import os
 import random
 import re
 import threading
 import time
+import tempfile
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -232,9 +234,20 @@ class FlashcardGenerator:
             else:
                 return None
 
-        # Save to Cache
-        with open(cache_path, "w", encoding="utf-8") as f:
-            json.dump(cleaned_text, f, ensure_ascii=False)
+        # Save to Cache (atomic write to prevent corruption)
+        temp_fd, temp_path = tempfile.mkstemp(dir=CACHE_DIR, suffix='.json', text=True)
+        try:
+            with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                json.dump(cleaned_text, f, ensure_ascii=False)
+            # Atomic move (POSIX atomic, Windows near-atomic)
+            os.replace(temp_path, cache_path)
+        except Exception as e:
+            # Clean up temp file on error
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
+            logger.warning(f"Failed to write cache for {name}: {e}")
             
         return cleaned_text
 
