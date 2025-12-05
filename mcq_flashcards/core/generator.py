@@ -186,6 +186,9 @@ class FlashcardGenerator:
         Returns:
             Generated MCQ text, or None if generation failed
         """
+        if not text or len(text.strip()) < 20:
+            return None
+
         # Check Cache
         cache_path = self.get_cache_key(text)
         if cache_path.exists():

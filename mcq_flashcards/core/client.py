@@ -48,6 +48,9 @@ class OllamaClient:
         Returns:
             Response dictionary from Ollama API, or None if all retries failed
         """
+        if not prompt or not prompt.strip():
+            return None
+
         for attempt in range(MAX_RETRIES):
             start_time = time.time()
             try:

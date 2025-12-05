@@ -151,10 +151,15 @@ class Config:
         Returns:
             True if configuration is valid, False otherwise
         """
-        if self.workers < 1:
-            logger.error(f"Invalid worker count: {self.workers}")
-            return False
+        # Validate semester path
+        class_root, _ = get_semester_paths(self.semester)
+        if not class_root.exists():
+            if not self.dev_mode:
+                logger.error(f"Semester directory not found: {class_root}")
+                return False
+            # In dev mode, we allow missing paths as we might be creating them
             
+        # Validate weeks
         if not (1 <= self.start_week <= 52):
             logger.error(f"Invalid start week: {self.start_week}")
             return False
@@ -165,25 +170,6 @@ class Config:
             
         if self.start_week > self.end_week:
             logger.error(f"Start week ({self.start_week}) cannot be greater than end week ({self.end_week})")
-            return False
-            
-        return True
-    
-    def validate(self) -> bool:
-        """Validate configuration settings.
-        
-        Returns:
-            True if valid, False otherwise
-        """
-        # Validate semester path
-        class_root, _ = get_semester_paths(self.semester)
-        if not class_root.exists():
-            logger.error(f"Semester directory not found: {class_root}")
-            return False
-            
-        # Validate weeks
-        if self.start_week < 1 or self.end_week < self.start_week:
-            logger.error(f"Invalid week range: {self.start_week}-{self.end_week}")
             return False
             
         # Validate workers
