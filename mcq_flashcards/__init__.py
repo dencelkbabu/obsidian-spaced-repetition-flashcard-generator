@@ -6,7 +6,7 @@ multiple-choice questions from lecture notes.
 Version: 3.24.0
 """
 
-__version__ = "3.25.1"
+__version__ = "3.25.2"
 
 # Core exports
 from mcq_flashcards.core.config import Config, ProcessingStats
