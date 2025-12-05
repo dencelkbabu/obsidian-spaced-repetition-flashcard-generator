@@ -63,3 +63,63 @@ def test_validate_invalid_workers(mock_paths):
     # Invalid: too many workers
     config = Config(workers=20)
     assert config.validate() is False
+
+@patch('mcq_flashcards.core.config.get_semester_paths')
+def test_validate_invalid_bloom_level(mock_paths):
+    """Test validation with invalid Bloom's taxonomy level."""
+    # Mock existing directory
+    mock_root = MagicMock()
+    mock_root.exists.return_value = True
+    mock_paths.return_value = (mock_root, MagicMock())
+    
+    # Invalid Bloom's level
+    config = Config(bloom_level="invalid_level")
+    assert config.validate() is False
+    
+    # Valid Bloom's level should pass
+    config = Config(bloom_level="apply")
+    assert config.validate() is True
+    
+    # None should be valid (mixed levels)
+    config = Config(bloom_level=None)
+    assert config.validate() is True
+
+@patch('mcq_flashcards.core.config.get_semester_paths')
+def test_validate_invalid_difficulty(mock_paths):
+    """Test validation with invalid difficulty level."""
+    # Mock existing directory
+    mock_root = MagicMock()
+    mock_root.exists.return_value = True
+    mock_paths.return_value = (mock_root, MagicMock())
+    
+    # Invalid difficulty
+    config = Config(difficulty="super_hard")
+    assert config.validate() is False
+    
+    # Valid difficulty should pass
+    config = Config(difficulty="medium")
+    assert config.validate() is True
+    
+    # None should be valid (mixed difficulty)
+    config = Config(difficulty=None)
+    assert config.validate() is True
+
+@patch('mcq_flashcards.core.config.get_semester_paths')
+def test_validate_bloom_and_difficulty_combined(mock_paths):
+    """Test validation with both Bloom's level and difficulty."""
+    # Mock existing directory
+    mock_root = MagicMock()
+    mock_root.exists.return_value = True
+    mock_paths.return_value = (mock_root, MagicMock())
+    
+    # Both valid
+    config = Config(bloom_level="analyze", difficulty="hard")
+    assert config.validate() is True
+    
+    # Invalid Bloom's, valid difficulty
+    config = Config(bloom_level="invalid", difficulty="hard")
+    assert config.validate() is False
+    
+    # Valid Bloom's, invalid difficulty
+    config = Config(bloom_level="analyze", difficulty="impossible")
+    assert config.validate() is False

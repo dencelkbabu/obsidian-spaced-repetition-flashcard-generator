@@ -47,45 +47,45 @@ class TestCacheClearing(unittest.TestCase):
     def test_selective_cache_clearing(self):
         """Test that clearing cache for one subject doesn't affect others."""
         # Arrange: Create cache files for multiple subjects
-        (self.test_cache_dir / "ACCT1001_abc123.pkl").touch()
-        (self.test_cache_dir / "ACCT1001_def456.pkl").touch()
-        (self.test_cache_dir / "COMM1001_xyz789.pkl").touch()
-        (self.test_cache_dir / "MATH1001_qwe321.pkl").touch()
+        (self.test_cache_dir / "ACCT1001_abc123.json").touch()
+        (self.test_cache_dir / "ACCT1001_def456.json").touch()
+        (self.test_cache_dir / "COMM1001_xyz789.json").touch()
+        (self.test_cache_dir / "MATH1001_qwe321.json").touch()
         
         # Act: Clear only ACCT1001 cache
         from cli import clear_cache
         clear_cache("ACCT1001")
         
         # Assert: ACCT1001 files deleted, others remain
-        self.assertFalse((self.test_cache_dir / "ACCT1001_abc123.pkl").exists(),
+        self.assertFalse((self.test_cache_dir / "ACCT1001_abc123.json").exists(),
                         "ACCT1001 cache should be deleted")
-        self.assertFalse((self.test_cache_dir / "ACCT1001_def456.pkl").exists(),
+        self.assertFalse((self.test_cache_dir / "ACCT1001_def456.json").exists(),
                         "ACCT1001 cache should be deleted")
-        self.assertTrue((self.test_cache_dir / "COMM1001_xyz789.pkl").exists(),
+        self.assertTrue((self.test_cache_dir / "COMM1001_xyz789.json").exists(),
                        "COMM1001 cache should NOT be deleted")
-        self.assertTrue((self.test_cache_dir / "MATH1001_qwe321.pkl").exists(),
+        self.assertTrue((self.test_cache_dir / "MATH1001_qwe321.json").exists(),
                        "MATH1001 cache should NOT be deleted")
     
     def test_global_cache_clearing(self):
         """Test that clearing ALL cache deletes everything."""
         # Arrange: Create cache files for multiple subjects
-        (self.test_cache_dir / "ACCT1001_abc123.pkl").touch()
-        (self.test_cache_dir / "COMM1001_xyz789.pkl").touch()
-        (self.test_cache_dir / "MATH1001_qwe321.pkl").touch()
+        (self.test_cache_dir / "ACCT1001_abc123.json").touch()
+        (self.test_cache_dir / "COMM1001_xyz789.json").touch()
+        (self.test_cache_dir / "MATH1001_qwe321.json").touch()
         
         # Act: Clear ALL cache
         from cli import clear_cache
         clear_cache("ALL")
         
         # Assert: All cache files deleted
-        cache_files = list(self.test_cache_dir.glob("*.pkl"))
+        cache_files = list(self.test_cache_dir.glob("*.json"))
         self.assertEqual(len(cache_files), 0,
                         f"All cache should be deleted, but found: {cache_files}")
     
     def test_clearing_nonexistent_subject(self):
         """Test that clearing cache for non-existent subject doesn't crash."""
         # Arrange: Create some cache files
-        (self.test_cache_dir / "ACCT1001_abc123.pkl").touch()
+        (self.test_cache_dir / "ACCT1001_abc123.json").touch()
         
         # Act: Clear cache for subject with no cache files
         from cli import clear_cache
@@ -98,7 +98,7 @@ class TestCacheClearing(unittest.TestCase):
         
         # Assert: Original cache files still exist
         self.assertTrue(success, "clear_cache should handle non-existent subjects gracefully")
-        self.assertTrue((self.test_cache_dir / "ACCT1001_abc123.pkl").exists(),
+        self.assertTrue((self.test_cache_dir / "ACCT1001_abc123.json").exists(),
                        "Existing cache should not be affected")
 
 

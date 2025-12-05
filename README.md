@@ -37,7 +37,7 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
 
 1.  **[Obsidian Spaced Repetition Plugin](https://github.com/st3v3nmw/obsidian-spaced-repetition/)**: Required for reviewing the flashcards.
 2.  **Ollama**: Installed and running locally.
-    *   Default Model: `llama3:8b` (Configurable).
+    *   Default Model: `llama3.1:8b` (Configurable).
 3.  **Python 3.8+**: With the following dependencies:
 ```bash
 pip install requests pyyaml tqdm pytest
@@ -50,7 +50,7 @@ _scripts/
 ├── mcq_flashcards.py          # Backwards-compatible entry point
 ├── cli.py                     # Main CLI interface
 ├── pytest.ini                 # Test configuration
-├── tests/                     # Test suite (105 tests)
+├── tests/                     # Test suite (125 tests)
 └── mcq_flashcards/            # Core package
     ├── core/                  # Core functionality
     │   ├── config.py          # Configuration & constants
@@ -93,7 +93,7 @@ VAULT_ROOT = Path(os.getenv("VAULT_ROOT", str(SCRIPT_DIR.parent)))  # v3.17.0: E
 ```
 
 You can also configure:
-*   `DEFAULT_MODEL`: The Ollama model to use (default: `llama3:8b`).
+*   `DEFAULT_MODEL`: The Ollama model to use (default: `llama3.1:8b`).
 *   `DEFAULT_WORKERS`: Number of threads for parallel processing.
 *   `CACHE_DIR`: Location for caching LLM responses (JSON format for security - v3.15.0).
 *   `VAULT_ROOT`: Override via environment variable for flexible deployment.

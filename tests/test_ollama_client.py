@@ -32,7 +32,7 @@ class TestOllamaClient(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "model": "llama3:8b",
+            "model": "llama3.1:8b",
             "response": "Test MCQ output",
             "done": True
         }
