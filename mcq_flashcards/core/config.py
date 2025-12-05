@@ -6,6 +6,7 @@ data structures used throughout the application.
 
 import time
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -13,7 +14,9 @@ from typing import Optional
 # --- PATH CONFIGURATION ---
 # Go up two levels: mcq_flashcards/core -> mcq_flashcards -> _scripts
 SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent
-VAULT_ROOT = SCRIPT_DIR.parent
+
+# Allow override via environment variable for flexibility
+VAULT_ROOT = Path(os.getenv("VAULT_ROOT", str(SCRIPT_DIR.parent)))
 ACADEMICS_ROOT = VAULT_ROOT / "Academics"
 BCOM_ROOT = ACADEMICS_ROOT / "BCom"
 CONCEPT_SOURCE = ACADEMICS_ROOT / "Concepts"
