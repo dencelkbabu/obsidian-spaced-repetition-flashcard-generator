@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import requests
+from tqdm import tqdm
 
 from mcq_flashcards import __version__
 from mcq_flashcards.core.config import (
@@ -60,12 +61,12 @@ def clear_cache(subject: str) -> None:
         return
 
     count = 0
-    for f in files_to_delete:
+    for f in tqdm(files_to_delete, desc="Clearing cache", unit="file"):
         try:
             f.unlink()
             count += 1
         except Exception as e:
-            print(f"   ⚠️ Failed to delete {f.name}: {e}")
+            tqdm.write(f"   ⚠️ Failed to delete {f.name}: {e}")
 
     print(f"   → Cleared {count} cache files")
 
