@@ -187,8 +187,8 @@ class FlashcardGenerator:
                     with self.stats_lock:
                         self.stats.cache_hits += 1
                     return json.load(f)
-            except (json.JSONDecodeError, EOFError, FileNotFoundError):
-                pass  # Corrupt cache, ignore
+            except (json.JSONDecodeError, EOFError, FileNotFoundError) as e:
+                logger.warning(f"Cache read failed for {name}: {e}. Regenerating...")
 
         # Construct Prompt
         prompt = self._construct_prompt(text)
