@@ -184,10 +184,11 @@ def select_preset() -> tuple[Optional[str], Optional[str]]:
         Tuple of (bloom_level, difficulty)
     """
     print(f"\n🎯 Select Study Mode:")
-    print(f"  1. {PRESETS['exam']['description']}")
-    print(f"  2. {PRESETS['review']['description']}")
-    print(f"  3. {PRESETS['deep']['description']}")
-    print(f"  4. {PRESETS['mixed']['description']}")
+    
+    # Display presets dynamically
+    preset_keys = ["exam", "review", "deep", "mixed"]
+    for i, key in enumerate(preset_keys, 1):
+        print(f"  {i}. {PRESETS[key]['description']}")
     print(f"  5. Custom (Advanced - Choose Bloom's + Difficulty manually)")
     
     preset_input = input("\nSelect mode (1-5, or Enter for Exam Prep): ").strip()
