@@ -1,0 +1,46 @@
+# <type>: <short description (lowercase, no period)>
+#
+# - <change 1 (lowercase, starts with verb)>
+# - <change 2>
+# - <change 3>
+#
+# <optional context paragraph (lowercase)>
+#
+# <optional examples section>
+#
+# bumped version to x.y.z
+
+# Commit Types:
+# - feat: New feature
+# - fix: Bug fix
+# - docs: Documentation only
+# - test: Adding or updating tests
+# - perf: Performance improvement
+# - refactor: Code refactoring
+# - chore: Maintenance tasks
+
+# Rules:
+# - Subject: lowercase, no period, under 50 chars
+# - Body: lowercase, use hyphens for bullets
+# - Version: last line, "bumped version to x.y.z"
+# - Use present tense ("add" not "added")
+# - Blank line between subject and body
+# - Sign commits: git commit -S
+
+# Example:
+# feat: add batch week processing support
+#
+# - add parse_week_argument() helper for week range/list parsing
+# - support week ranges (1-4), comma-separated (1,3,5), and mixed (1-3,5)
+# - modify execute_generation() to accept list of weeks
+# - update CLI help text with new week format examples
+# - add 11 comprehensive test cases
+#
+# fully backward compatible with existing single week/ALL syntax
+# examples:
+#   python cli.py -d COMM1001 1-4      # Weeks 1-4
+#   python cli.py -d COMM1001 1,3,5    # Weeks 1,3,5
+#
+# tests: 136 passed (125 original + 11 new)
+#
+# bumped version to 3.24.0

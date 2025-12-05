@@ -1,24 +1,147 @@
 # Contributing Guidelines
 
-## Commit System
-- Follow the **Conventional Commits** specification.
-- **Always sign** commits, tags, and releases.
-- Keep commit messages **short**.
-- Use the **commit message body** for explanations.
-- Use **hyphens** for bullet points in the commit body.
+## Commit Message Format
+
+### Structure
+```
+<type>: <subject>
+
+<body>
+
+bumped version to x.y.z
+```
+
+### Rules
+1. **Follow Conventional Commits** specification
+2. **Always sign commits** (`git commit -S`)
+3. **Subject line**: Short, lowercase, no period
+4. **Body**: Lowercase, use hyphens for bullets, blank line after subject
+5. **Version**: Last line, format: "bumped version to x.y.z"
+
+### Commit Types
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `test`: Adding or updating tests
+- `perf`: Performance improvement
+- `refactor`: Code change that neither fixes a bug nor adds a feature
+- `chore`: Maintenance tasks
+
+## Commit Message Template
+
+```
+<type>: <short description (lowercase, no period)>
+
+- <change 1 (lowercase, starts with verb)>
+- <change 2>
+- <change 3>
+
+<optional context paragraph (lowercase)>
+
+<optional examples section>
+
+bumped version to x.y.z
+```
+
+## Real Examples
+
+### Example 1: Feature Addition
+```
+feat: add batch week processing support
+
+- add parse_week_argument() helper for week range/list parsing
+- support week ranges (1-4), comma-separated (1,3,5), and mixed (1-3,5)
+- modify execute_generation() to accept list of weeks
+- update CLI help text with new week format examples
+- add 11 comprehensive test cases
+
+fully backward compatible with existing single week/ALL syntax
+examples:
+  python cli.py -d COMM1001 1-4      # Weeks 1-4
+  python cli.py -d COMM1001 1,3,5    # Weeks 1,3,5
+  python cli.py -d COMM1001 1-3,5,7  # Mixed
+
+tests: 136 passed (125 original + 11 new)
+
+bumped version to 3.24.0
+```
+
+### Example 2: Bug Fix
+```
+fix: correct type hint from 'any' to 'Any'
+
+- added 'Any' to typing imports in generator.py
+- changed lowercase 'any' to proper 'Any' in _save_raw_log method signature
+- improves type safety and IDE support
+
+bumped version to 3.22.2
+```
+
+### Example 3: Test Addition
+```
+test: comprehensive test suite improvements
+
+- fixed outdated model reference (llama3:8b → llama3.1:8b)
+- fixed outdated cache format (.pkl → .json)
+- added 17 new tests across 3 files:
+  * test_prompts.py (12 tests) - prompt template validation
+  * test_self_correction.py (3 tests) - stats tracking
+  * test_concept_caching.py (2 tests) - v3.18.0 feature
+- enhanced config validation tests (9 test cases)
+- updated README.md test count (105 → 125)
+- updated README.md model reference
+- all 125 tests passing
+
+bumped version to 3.23.0
+```
+
+### Example 4: Documentation
+```
+docs: add AI agent documentation and SemVer guidelines
+
+- add comprehensive copilot instructions for AI agents
+- add enhancement plan (7 features planned for v3.24-3.26)
+- add implementation task checklist with SemVer versioning
+- add detailed SemVer guidelines to CONTRIBUTING.md
+- track .github/ folder in git (removed from .gitignore)
+
+bumped version to 3.23.1
+```
+
+## Formatting Rules
+
+### DO ✅
+- Use lowercase for everything (subject, body, examples)
+- Start bullet points with verbs (add, fix, update, remove)
+- Use hyphens (`-`) for bullet points
+- Use asterisks (`*`) for sub-bullets
+- Keep subject line under 50 characters
+- Add blank line between subject and body
+- Put version bump as last line
+- Use present tense ("add" not "added")
+
+### DON'T ❌
+- Don't capitalize (except proper nouns like "Bloom's", "CLI")
+- Don't use periods at end of subject line
+- Don't use "Version:" prefix (just "bumped version to")
+- Don't put version in subject line (only in body)
+- Don't use past tense in bullet points
 
 ## Versioning Strategy
 
 ### Major Releases (x.0.0) & Significant Milestones (x.10.0, x.20.0)
 - ✅ **Version number in commit message**
 - ✅ **Git tag created**
+- ✅ **CHANGELOG.md updated**
 - ✅ Example: `v3.0.0`, `v3.10.0`, `v3.20.0`
 
 ### Regular Minor/Patch Releases (x.y.z)
 - ✅ **Version number only in code** (`__version__`)
-- ❌ **No version in commit message**
+- ✅ **Version in commit body** ("bumped version to x.y.z")
+- ❌ **No version in commit subject**
 - ❌ **No git tag**
-- ✅ Example: Current version is `3.21.0` in code, but no tag.
+- ❌ **No CHANGELOG.md update** (only at milestones)
+- ✅ Example: Current version is `3.25.0` in code, but no tag
 
 *This keeps the git history clean and tags meaningful!* 🎯
 
