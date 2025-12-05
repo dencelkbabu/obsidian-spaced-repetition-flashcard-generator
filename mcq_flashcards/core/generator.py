@@ -118,7 +118,9 @@ class FlashcardGenerator:
         Returns:
             Path to cache file
         """
-        combined = f"{self.config.model}_{text}"
+        bloom = self.config.bloom_level or "mixed"
+        diff = self.config.difficulty or "mixed"
+        combined = f"{self.config.model}_{bloom}_{diff}_{text}"
         hash_key = hashlib.md5(combined.encode()).hexdigest()
         return CACHE_DIR / f"{self.subject}_{hash_key}.json"
 
