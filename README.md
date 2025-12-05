@@ -17,8 +17,12 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
 *   **🔄 Self-Correction (v2.0):** Automatically detects invalid outputs and prompts the AI to fix them, ensuring high success rates.
 *   **🧹 Auto-Cleanup (v2.7):** Post-processor automatically fixes LLM output inconsistencies and verifies quality.
 *   **📦 Modular Architecture (v2.7):** Clean package structure for better maintainability and extensibility.
-*   **🧪 Comprehensive Testing (v3.9.2):** 83 automated tests ensure code quality and reliability.
+*   **🧪 Comprehensive Testing (v3.20.0):** 101 automated tests ensure code quality and reliability.
 *   **✅ Strict Validation (v3.10.0):** Enhanced validator catches malformed MCQs earlier.
+*   **🔒 Secure Caching (v3.15.0):** JSON-based cache eliminates security risks of pickle serialization.
+*   **📊 Performance Metrics (v3.14.0):** Track generation speed and throughput.
+*   **🎯 Bloom's Taxonomy (v3.11.0):** Target specific cognitive levels for your study needs.
+*   **⚙️ Configurable Paths (v3.17.0):** Environment variable support for flexible deployment.
 
 ## 🚀 Prerequisites
 
@@ -37,7 +41,7 @@ _scripts/
 ├── mcq_flashcards.py          # Backwards-compatible entry point
 ├── cli.py                     # Main CLI interface
 ├── pytest.ini                 # Test configuration
-├── tests/                     # Test suite (83 tests)
+├── tests/                     # Test suite (101 tests)
 └── mcq_flashcards/            # Core package
     ├── core/                  # Core functionality
     │   ├── config.py          # Configuration & constants
@@ -76,25 +80,30 @@ Configuration is centralized in `mcq_flashcards/core/config.py`. The script auto
 
 ```python
 SCRIPT_DIR = Path(__file__).resolve().parent.parent.parent
-VAULT_ROOT = SCRIPT_DIR.parent
+VAULT_ROOT = Path(os.getenv("VAULT_ROOT", str(SCRIPT_DIR.parent)))  # v3.17.0: Environment variable support
 ```
 
 You can also configure:
 *   `DEFAULT_MODEL`: The Ollama model to use (default: `llama3:8b`).
 *   `DEFAULT_WORKERS`: Number of threads for parallel processing.
-*   `CACHE_DIR`: Location for caching LLM responses.
+*   `CACHE_DIR`: Location for caching LLM responses (JSON format for security - v3.15.0).
+*   `VAULT_ROOT`: Override via environment variable for flexible deployment.
 
 ## 🏃 Usage
 
 1.  **Start Ollama**: `ollama serve`
 2.  **Run the Script**: `python mcq_flashcards.py`
-3.  **Select Subject**: Enter the subject code (e.g., `ACCT1001`) or press Enter for ALL subjects.
-4.  **Select Week**: Enter a week number or press Enter for all weeks.
+3.  **Select Semester**: Choose your semester (or press Enter for default).
+4.  **Select Subject**: Enter the subject code (e.g., `ACCT1001`) or press Enter for ALL subjects.
+5.  **Select Week**: Enter a week number or press Enter for all weeks.
+6.  **Select Study Mode**: Choose from Exam Prep, Quick Review, Deep Study, Mixed, or Custom (Bloom's + Difficulty).
 
 The script will:
 - Generate flashcards for selected subjects/weeks
+- Apply Bloom's taxonomy and difficulty targeting
 - Automatically post-process output to fix formatting issues
-- Verify output quality
+- Verify output quality with strict validation
+- Display performance metrics (duration, questions/minute)
 - Report statistics and any issues found
 
 ## 📄 Output Format
@@ -143,65 +152,34 @@ pytest --cov=mcq_flashcards --cov-report=html
 
 ### Test Coverage
 
-The test suite includes **83 comprehensive tests** covering:
+The test suite includes **101 comprehensive tests** covering:
 
-- **Unit Tests (38 tests)**
+- **Unit Tests (47 tests)**
   - MCQCleaner (15 tests) - Text cleaning and formatting
   - MCQValidator (14 tests) - Format validation with strict checks
   - AutoTuner (13 tests) - Performance optimization
-  - Cache Management (3 tests) - Cache clearing logic
+  - Cache Management (4 tests) - JSON cache operations
+  - Configuration (3 tests) - Input validation
+  - Logging (3 tests) - Log rotation and setup
+  - Metrics (3 tests) - Performance tracking
 
-- **Integration Tests (42 tests)**
+- **Integration Tests (54 tests)**
   - OllamaClient (9 tests) - API interaction and retries
   - FlashcardGenerator (10 tests) - End-to-end generation
   - PostProcessor (9 tests) - Output cleanup
   - CLI (14 tests) - User interface and argument parsing
+  - Prompts (12 tests) - Template validation
 
 All tests run in < 2 seconds with no external dependencies required.
 
 ## 📝 Changelog
 
-### v3.10.0 (2025-12-05) - Stricter Validation
-- **feat:** enhance MCQ validator with strict format checks
-- **feat:** add validation for exactly 4 options (previously only checked 1 & 2)
-- **feat:** add answer number validation (must be 1-4)
-- **feat:** add explanation requirement check
-- **test:** add 6 new validator test cases
-- **refactor:** improve output quality through earlier error detection
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### v3.9.2 (2025-12-05) - Testing Infrastructure
-- **test:** add comprehensive automated testing (83 tests total)
-- **test:** add unit tests for all processing and utility modules
-- **test:** add integration tests for generator, client, and CLI
-- **test:** add test fixtures and pytest configuration
-- **chore:** add `.gitignore` entries for test artifacts
-
-### v3.0.0 - v3.9.1 (2025-12-04) - Major Refactoring
-- **refactor!:** modularize flashcard generator into package structure (BREAKING CHANGE)
-- **feat:** add automatic post-processing with verification
-- **fix:** resolve escaped newlines and regex patterns
-- **feat:** improve UX - press Enter to process ALL subjects
-- **feat:** enhance output quality with automatic cleanup
-- **feat:** auto-cleanup `_dev` folder in prod mode
-- **feat:** simplify interactive mode with preset system
-- **feat:** add difficulty levels for MCQ generation
-- **feat:** add Bloom's Taxonomy selection to interactive mode
-- **feat:** add Bloom's Taxonomy targeting for MCQ generation
-- **refactor:** extract helper functions from `run_interactive`
-- **test:** add unit tests for cache clearing and MCQ validation
-- **feat:** add type hints and extract magic numbers
-- **refactor:** improve error handling and post-processor coverage
-- **feat:** add dev/prod modes and cache clearing
-- **feat:** add semester selection with interactive prompt
-- **docs:** fix README formatting and add Claude Sonnet to credits
-
-### v2.6.0 (Previous)
-- Added batch processing for multiple subjects
-- Improved error handling
-
-### v2.0.0
-- AutoTuner for dynamic performance optimization
-- Self-correction mechanism for invalid outputs
+**Latest:** v3.20.0 (2025-12-05) - Code Review Improvements
+- Enhanced reliability, performance, and maintainability
+- 101 tests passing
+- Improved security (JSON cache), logging, validation, and performance metrics
 
 ## Credits
 
