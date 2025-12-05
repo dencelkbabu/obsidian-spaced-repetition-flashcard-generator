@@ -70,6 +70,9 @@ class FlashcardGenerator:
         
         self.subject_path = self.class_root / self.subject
         self.persona, self.focus = self._get_persona()
+        
+        # Cache concept file names for faster lookup
+        self.concept_cache = {f.stem for f in CONCEPT_SOURCE.glob("*.md")} if CONCEPT_SOURCE.exists() else set()
 
     def _get_persona(self) -> Tuple[str, str]:
         """Get subject-specific persona and focus for prompt engineering.
@@ -389,8 +392,9 @@ class FlashcardGenerator:
             c_list = c_list[:limit]
         
         for c in c_list:
-            cp = CONCEPT_SOURCE / f"{c}.md"
-            if cp.exists():
+            # Use cached concept names for faster lookup
+            if c in self.concept_cache:
+                cp = CONCEPT_SOURCE / f"{c}.md"
                 s, _ = self.extract_summary(cp)
                 if s:
                     concept_jobs.append((s, c, True))
