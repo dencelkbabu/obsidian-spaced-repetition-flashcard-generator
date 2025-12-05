@@ -409,14 +409,34 @@ class FlashcardGenerator:
         print(f"🚀 Processing {len(all_jobs)} items with {self.config.workers} workers...")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.workers) as executor:
-            futures = [executor.submit(self.process_item, job) for job in all_jobs]
+            futures = {executor.submit(self.process_item, job): job for job in all_jobs}
             
-            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Generating"):
+            # Create progress bar with custom format
+            pbar = tqdm(total=len(futures), desc="Generating", unit="item")
+            
+            for future in concurrent.futures.as_completed(futures):
                 result = future.result()
+                job = futures[future]
+                _, name, is_concept = job
+                
+                # Update progress bar description with current item
+                item_type = "Concept" if is_concept else "Lecture"
+                pbar.set_description(f"📝 {item_type}: {name[:40]}")
+                
                 if result:
                     with self.file_lock:
                         with open(out_path, 'a', encoding='utf-8') as f:
                             f.write(result)
+                
+                # Update progress bar
+                pbar.update(1)
+                
+                # Display real-time stats below progress bar
+                with self.stats_lock:
+                    stats_line = f"   Cache: {self.stats.cache_hits} | Success: {self.stats.successful_cards}/{len(all_jobs)} | Errors: {self.stats.failed_cards}"
+                    pbar.set_postfix_str(stats_line)
+            
+            pbar.close()
 
         # Final Report for Week
         self.stats.end_time = time.time()
