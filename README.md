@@ -8,21 +8,30 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
 
 ## ✨ Key Features
 
+### Core Features
 *   **🤖 AI-Powered:** Uses Llama 3 (or any Ollama model) to generate grounded, accurate questions.
-*   **⚡ High Performance:** Multi-threaded processing and smart caching ensure fast subsequent runs.
 *   **🔗 Context-Aware:** Intelligently scans your lecture notes and follows `[[wikilinks]]` to generate concept-specific cards.
-*   **🛠️ Robust & Portable:** Features automatic retries, error handling, and works on any OS (Windows/Mac/Linux) with relative path configuration.
 *   **📝 Obsidian Ready:** Outputs clean Markdown formatted strictly for the Spaced Repetition plugin.
-*   **🚀 AutoTuner (v2.0):** Dynamically monitors your GPU (Nvidia) and error rates to optimize performance and prevent overheating.
-*   **🔄 Self-Correction (v2.0):** Automatically detects invalid outputs and prompts the AI to fix them, ensuring high success rates.
-*   **🧹 Auto-Cleanup (v2.7):** Post-processor automatically fixes LLM output inconsistencies and verifies quality.
-*   **📦 Modular Architecture (v2.7):** Clean package structure for better maintainability and extensibility.
-*   **🧪 Comprehensive Testing (v3.20.0):** 101 automated tests ensure code quality and reliability.
-*   **✅ Strict Validation (v3.10.0):** Enhanced validator catches malformed MCQs earlier.
+*   **🎯 Bloom's Taxonomy (v3.11.0):** Target specific cognitive levels (Remember, Understand, Apply, Analyze, Evaluate, Create).
+*   **🎚️ Difficulty Levels:** Choose Easy, Medium, Hard, or Mixed difficulty for your questions.
+
+### Performance & Reliability
+*   **⚡ High Performance:** Multi-threaded processing and smart JSON caching ensure fast subsequent runs.
+*   **🚀 AutoTuner (v2.0):** Dynamically monitors GPU (Nvidia) and error rates to optimize performance.
+*   **📊 Performance Metrics (v3.14.0):** Track generation speed, throughput (questions/minute), and progress.
 *   **🔒 Secure Caching (v3.15.0):** JSON-based cache eliminates security risks of pickle serialization.
-*   **📊 Performance Metrics (v3.14.0):** Track generation speed and throughput.
-*   **🎯 Bloom's Taxonomy (v3.11.0):** Target specific cognitive levels for your study needs.
+
+### Quality Assurance
+*   **✅ Strict Validation (v3.10.0):** Enhanced validator ensures exactly 4 options, valid answers, and explanations.
+*   **🔄 Self-Correction (v2.0):** Automatically detects invalid outputs and prompts the AI to fix them.
+*   **🧹 Auto-Cleanup (v2.7):** Post-processor fixes LLM output inconsistencies and verifies quality.
+*   **🧪 Comprehensive Testing (v3.20.0):** 101 automated tests ensure code quality and reliability.
+
+### Developer Experience
+*   **📦 Modular Architecture (v2.7):** Clean package structure for better maintainability and extensibility.
+*   **🛠️ Robust & Portable:** Automatic retries, error handling, works on any OS (Windows/Mac/Linux).
 *   **⚙️ Configurable Paths (v3.17.0):** Environment variable support for flexible deployment.
+*   **🔧 Dev Mode:** Advanced features for testing and development (see Usage section).
 
 ## 🚀 Prerequisites
 
@@ -105,6 +114,42 @@ The script will:
 - Verify output quality with strict validation
 - Display performance metrics (duration, questions/minute)
 - Report statistics and any issues found
+
+### Development Mode
+
+For advanced users and testing:
+
+```bash
+# Basic dev mode
+python mcq_flashcards.py -d ACCT1001
+
+# Specific week
+python mcq_flashcards.py -d ACCT1001 5
+
+# Clear cache before processing
+python mcq_flashcards.py -d ACCT1001 --clear-cache
+
+# Deep clear (cache only, no processing)
+python mcq_flashcards.py -d ALL --deep-clear
+
+# Custom Bloom's level and difficulty
+python mcq_flashcards.py -d ACCT1001 --bloom analyze --difficulty hard
+
+# Override semester
+python mcq_flashcards.py -d ACCT1001 -s "Semester Two"
+```
+
+**Dev Mode Features:**
+- Skip interactive prompts
+- Direct subject/week specification
+- Cache management (`--clear-cache`, `--deep-clear`)
+- Bloom's taxonomy targeting (`--bloom`)
+- Difficulty selection (`--difficulty`)
+- Semester override (`-s`, `--semester`)
+- Output to `_dev` folder (auto-cleaned on next run)
+
+Run `python mcq_flashcards.py --help` for all options.
+
 
 ## 📄 Output Format
 
