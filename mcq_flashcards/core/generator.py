@@ -385,11 +385,20 @@ class FlashcardGenerator:
         concepts_set = set()
         
         print(f"\n📝 Extracting content for Week {week}...")
-        for p in tqdm(files):
-            summary, links = self.extract_summary(p)
-            concepts_set.update(links)
-            if summary:
-                lecture_jobs.append((summary, p.name, False))
+        
+        # Parallel file reading for better I/O performance
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            future_to_file = {executor.submit(self.extract_summary, p): p for p in files}
+            
+            for future in tqdm(concurrent.futures.as_completed(future_to_file), total=len(files), desc="Reading files"):
+                p = future_to_file[future]
+                try:
+                    summary, links = future.result()
+                    concepts_set.update(links)
+                    if summary:
+                        lecture_jobs.append((summary, p.name, False))
+                except Exception as e:
+                    logger.warning(f"Failed to extract from {p.name}: {e}")
 
         # Prepare Concept Jobs
         concept_jobs = []
