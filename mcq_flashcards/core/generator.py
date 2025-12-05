@@ -16,7 +16,7 @@ import tempfile
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from tqdm import tqdm
 
@@ -122,7 +122,7 @@ class FlashcardGenerator:
         hash_key = hashlib.md5(combined.encode()).hexdigest()
         return CACHE_DIR / f"{self.subject}_{hash_key}.json"
 
-    def _save_raw_log(self, name: str, data: any, suffix: str = "") -> None:
+    def _save_raw_log(self, name: str, data: Any, suffix: str = "") -> None:
         """Save raw API response for debugging.
         
         Args:
