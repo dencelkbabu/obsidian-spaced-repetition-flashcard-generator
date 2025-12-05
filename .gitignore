@@ -33,3 +33,6 @@ _dev/
 _benchmark_internal/
 tests/_dev/
 tests/_benchmark_internal/
+
+# GitHub config (agent instructions, workflows, etc.)
+.github/
