@@ -176,6 +176,16 @@ class Config:
         if self.workers < 1 or self.workers > 16:
             logger.error(f"Invalid worker count: {self.workers} (Must be 1-16)")
             return False
+        
+        # Validate Bloom's level
+        if self.bloom_level and self.bloom_level not in BLOOM_LEVELS:
+            logger.error(f"Invalid Bloom's level: {self.bloom_level}. Must be one of: {', '.join(BLOOM_LEVELS)}")
+            return False
+        
+        # Validate difficulty
+        if self.difficulty and self.difficulty not in DIFFICULTY_LEVELS:
+            logger.error(f"Invalid difficulty: {self.difficulty}. Must be one of: {', '.join(DIFFICULTY_LEVELS)}")
+            return False
             
         return True
 
