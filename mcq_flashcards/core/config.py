@@ -49,7 +49,7 @@ for d in [CACHE_DIR, RAW_DIR, ERROR_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # --- DEFAULT SETTINGS ---
-DEFAULT_MODEL = "llama3:8b"
+DEFAULT_MODEL = "llama3.1:8b"
 DEFAULT_WORKERS = 4
 MAX_RETRIES = 3
 BASE_DELAY = 0.5
