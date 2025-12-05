@@ -117,7 +117,7 @@ class FlashcardGenerator:
         hash_key = hashlib.md5(combined.encode()).hexdigest()
         return CACHE_DIR / f"{self.subject}_{hash_key}.json"
 
-    def _save_raw_log(self, name: str, data: any, suffix: str = ""):
+    def _save_raw_log(self, name: str, data: any, suffix: str = "") -> None:
         """Save raw API response for debugging.
         
         Args:
@@ -134,7 +134,7 @@ class FlashcardGenerator:
         except Exception as e:
             logger.warning(f"Failed to save raw log: {e}")
 
-    def _save_error_log(self, name: str, error: str, context: str):
+    def _save_error_log(self, name: str, error: str, context: str) -> None:
         """Save error log for debugging.
         
         Args:
