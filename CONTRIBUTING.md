@@ -34,3 +34,15 @@
 - ✅ Comprehensive changelogs in tags (auto-generated from commits).
 - ✅ Easy to see what changed between major releases.
 - ✅ Tags serve as release notes.
+
+## Testing
+
+Before submitting changes, ensure all tests pass:
+
+```bash
+# Run the full test suite
+pytest
+
+# Run specific tests if needed
+pytest tests/test_filename.py
+```

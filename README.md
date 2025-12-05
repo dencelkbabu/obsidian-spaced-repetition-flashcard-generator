@@ -25,7 +25,7 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
 *   **✅ Strict Validation (v3.10.0):** Enhanced validator ensures exactly 4 options, valid answers, and explanations.
 *   **🔄 Self-Correction (v2.0):** Automatically detects invalid outputs and prompts the AI to fix them.
 *   **🧹 Auto-Cleanup (v2.7):** Post-processor fixes LLM output inconsistencies and verifies quality.
-*   **🧪 Comprehensive Testing (v3.20.0):** 101 automated tests ensure code quality and reliability.
+*   **🧪 Comprehensive Testing (v3.20.0):** 105 automated tests ensure code quality and reliability.
 
 ### Developer Experience
 *   **📦 Modular Architecture (v2.7):** Clean package structure for better maintainability and extensibility.
@@ -50,7 +50,7 @@ _scripts/
 ├── mcq_flashcards.py          # Backwards-compatible entry point
 ├── cli.py                     # Main CLI interface
 ├── pytest.ini                 # Test configuration
-├── tests/                     # Test suite (101 tests)
+├── tests/                     # Test suite (105 tests)
 └── mcq_flashcards/            # Core package
     ├── core/                  # Core functionality
     │   ├── config.py          # Configuration & constants
@@ -197,7 +197,7 @@ pytest --cov=mcq_flashcards --cov-report=html
 
 ### Test Coverage
 
-The test suite includes **101 comprehensive tests** covering:
+The test suite includes **105 comprehensive tests** covering:
 
 - **Unit Tests (47 tests)**
   - MCQCleaner (15 tests) - Text cleaning and formatting
@@ -214,6 +214,10 @@ The test suite includes **101 comprehensive tests** covering:
   - PostProcessor (9 tests) - Output cleanup
   - CLI (14 tests) - User interface and argument parsing
   - Prompts (12 tests) - Template validation
+
+- **Robustness Tests (4 tests)**
+  - Concurrency (2 tests) - Thread safety and atomic writes
+  - Edge Cases (2 tests) - Large files and Unicode handling
 
 All tests run in < 2 seconds with no external dependencies required.
 
