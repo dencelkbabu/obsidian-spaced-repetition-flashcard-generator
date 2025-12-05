@@ -39,6 +39,64 @@ def check_ollama() -> bool:
         return False
 
 
+def parse_week_argument(week_arg: str) -> Optional[List[int]]:
+    """Parse week argument into list of week numbers.
+    
+    Supports multiple formats:
+    - Single: "1" → [1]
+    - Range: "1-4" → [1, 2, 3, 4]
+    - List: "1,3,5" → [1, 3, 5]
+    - Mixed: "1-3,5,7-9" → [1, 2, 3, 5, 7, 8, 9]
+    - All: "ALL" → None
+    
+    Args:
+        week_arg: Week argument string
+        
+    Returns:
+        List of week numbers, or None for ALL weeks, or empty list on error
+    """
+    if not week_arg or week_arg.lower() == "all":
+        return None
+    
+    weeks = set()
+    
+    try:
+        # Split by comma
+        parts = week_arg.split(',')
+        
+        for part in parts:
+            part = part.strip()
+            
+            # Check for range (e.g., "1-4")
+            if '-' in part:
+                start, end = part.split('-', 1)
+                start, end = int(start.strip()), int(end.strip())
+                
+                if start > end:
+                    print(f"❌ Invalid range: {part} (start > end)")
+                    return []
+                
+                if start < 1 or end > 52:
+                    print(f"❌ Invalid range: {part} (weeks must be 1-52)")
+                    return []
+                
+                weeks.update(range(start, end + 1))
+            else:
+                # Single week number
+                week_num = int(part)
+                if week_num < 1 or week_num > 52:
+                    print(f"❌ Invalid week: {week_num} (must be 1-52)")
+                    return []
+                weeks.add(week_num)
+        
+        return sorted(list(weeks))
+    
+    except ValueError:
+        print(f"❌ Invalid week format: {week_arg}")
+        print("   Valid formats: 1, 1-4, 1,3,5, 1-3,5, ALL")
+        return []
+
+
 def clear_cache(subject: str) -> None:
     """Clear cache files for the specified subject or all subjects.
     
@@ -316,7 +374,7 @@ def run_interactive() -> None:
         clear_cache(subject_for_cache)
 
     # Execution
-    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=False, bloom_level=bloom_level, difficulty=difficulty)
+    execute_generation(target_subjects, semester, class_root, output_dir, [week] if week else None, dev_mode=False, bloom_level=bloom_level, difficulty=difficulty)
 
 
 def run_dev(args: argparse.Namespace) -> None:
@@ -358,18 +416,14 @@ def run_dev(args: argparse.Namespace) -> None:
         return
 
     # Week
-    week = None
+    weeks = None  # None = ALL weeks
     if args.week:
-        if args.week.lower() == "all":
-            week = None
-        elif args.week.isdigit():
-            week = int(args.week)
-        else:
-            print(f"❌ Invalid week: {args.week}")
+        weeks = parse_week_argument(args.week)
+        if weeks == []:  # Empty list = parsing error
             return
     else:
         # Default to Week 1 in dev mode if not specified
-        week = 1
+        weeks = [1]
 
     # Cache Clearing
     if args.clear_cache or args.deep_clear:
@@ -379,12 +433,17 @@ def run_dev(args: argparse.Namespace) -> None:
             return
 
     # Execution
-    print(f"\n📂 Processing: {subject} - Week {week if week else 'ALL'} - {semester}")
-    execute_generation(target_subjects, semester, class_root, output_dir, week, dev_mode=True, bloom_level=args.bloom, difficulty=args.difficulty)
+    weeks_display = "ALL" if weeks is None else ", ".join(map(str, weeks))
+    print(f"\n📂 Processing: {subject} - Week(s) {weeks_display} - {semester}")
+    execute_generation(target_subjects, semester, class_root, output_dir, weeks, dev_mode=True, bloom_level=args.bloom, difficulty=args.difficulty)
 
 
-def execute_generation(subjects: List[str], semester: str, class_root: Path, output_dir: Path, week: Optional[int], dev_mode: bool = False, bloom_level: Optional[str] = None, difficulty: Optional[str] = None):
-    """Common execution logic for both modes."""
+def execute_generation(subjects: List[str], semester: str, class_root: Path, output_dir: Path, weeks: Optional[List[int]], dev_mode: bool = False, bloom_level: Optional[str] = None, difficulty: Optional[str] = None):
+    """Common execution logic for both modes.
+    
+    Args:
+        weeks: List of week numbers to process, or None for ALL weeks
+    """
     os_inhibitor = None
     if os.name == 'nt':
         os_inhibitor = WindowsInhibitor()
@@ -405,7 +464,21 @@ def execute_generation(subjects: List[str], semester: str, class_root: Path, out
                 continue
 
             gen = FlashcardGenerator(subject, cfg, class_root, output_dir)
-            gen.run(week)
+            
+            # Process weeks
+            if weeks is None:
+                # ALL weeks
+                gen.run(None)
+            elif len(weeks) == 1:
+                # Single week
+                gen.run(weeks[0])
+            else:
+                # Multiple specific weeks
+                for week_num in weeks:
+                    print(f"\n{'─'*40}")
+                    print(f"📝 Processing Week {week_num}")
+                    print(f"{'─'*40}")
+                    gen.run(week_num)
         
         # Post-processing
         print(f"\n{'='*40}")
@@ -444,7 +517,7 @@ def main() -> None:
     
     # Positional arguments for dev mode
     parser.add_argument("subject", nargs="?", help="Subject code or ALL (Required in dev mode)")
-    parser.add_argument("week", nargs="?", help="Week number or ALL (Default: 1)")
+    parser.add_argument("week", nargs="?", help="Week(s): number (1), range (1-4), list (1,3,5), or ALL (Default: 1)")
     
     # Optional flags
     parser.add_argument("-c", "--clear-cache", action="store_true", help="Clear cache before processing")
