@@ -22,6 +22,73 @@
 
 *This keeps the git history clean and tags meaningful!* 🎯
 
+## Semantic Versioning (SemVer) Guidelines
+
+This project follows **Semantic Versioning**: `MAJOR.MINOR.PATCH`
+
+### Version Number Format: `X.Y.Z`
+
+- **MAJOR (X):** Breaking changes, incompatible API changes
+- **MINOR (Y):** New features, backward-compatible functionality  
+- **PATCH (Z):** Bug fixes, performance improvements, backward-compatible
+
+### When to Bump Each Level
+
+#### MAJOR (X.0.0) - Breaking Changes
+- Breaking changes to CLI arguments
+- Incompatible changes to output format
+- Removal of features
+- **Example:** `3.0.0` → `4.0.0`
+- **Tagging:** ✅ Always create git tag
+
+#### MINOR (0.Y.0) - New Features
+- New CLI arguments or flags (e.g., batch week processing)
+- New features (quality reports, wikilink footer)
+- New output sections
+- New user-facing functionality
+- **Example:** `3.23.0` → `3.24.0`
+- **Tagging:** ❌ No git tag (unless milestone like x.10.0, x.20.0)
+
+#### PATCH (0.0.Z) - Improvements & Fixes
+- Bug fixes
+- Performance optimizations (caching, parallel processing)
+- UX improvements (progress indicators)
+- Internal refactoring
+- Documentation updates
+- **Example:** `3.24.0` → `3.24.1`
+- **Tagging:** ❌ No git tag
+
+### Version Bumping Examples
+
+**New Feature (MINOR):**
+```bash
+# Add batch week processing
+git commit -S -m "feat: add batch week processing support"
+# Bump: 3.23.0 → 3.24.0 (in __init__.py only)
+```
+
+**Performance Improvement (PATCH):**
+```bash
+# Optimize file reading
+git commit -S -m "perf: parallelize file reading for 2x speedup"
+# Bump: 3.24.0 → 3.24.1 (in __init__.py only)
+```
+
+**Bug Fix (PATCH):**
+```bash
+# Fix cache invalidation
+git commit -S -m "fix: correct cache key generation for presets"
+# Bump: 3.24.1 → 3.24.2 (in __init__.py only)
+```
+
+### Version Update Checklist
+
+When bumping version:
+1. ✅ Update `mcq_flashcards/__init__.py` (`__version__`)
+2. ✅ Update `CHANGELOG.md` with changes
+3. ✅ Commit with appropriate conventional commit message
+4. ✅ Tag only for MAJOR releases or milestones (x.10.0, x.20.0)
+
 ## Changelog Strategy
 
 ### Annotated Tags (Major & Milestone Releases)
