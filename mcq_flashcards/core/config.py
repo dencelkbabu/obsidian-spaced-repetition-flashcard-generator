@@ -144,6 +144,30 @@ class Config:
     dev_mode: bool = False
     bloom_level: Optional[str] = None  # Target Bloom's taxonomy level
     difficulty: Optional[str] = None  # Target difficulty level
+
+    def validate(self) -> bool:
+        """Validate configuration settings.
+        
+        Returns:
+            True if configuration is valid, False otherwise
+        """
+        if self.workers < 1:
+            logger.error(f"Invalid worker count: {self.workers}")
+            return False
+            
+        if not (1 <= self.start_week <= 52):
+            logger.error(f"Invalid start week: {self.start_week}")
+            return False
+            
+        if not (1 <= self.end_week <= 52):
+            logger.error(f"Invalid end week: {self.end_week}")
+            return False
+            
+        if self.start_week > self.end_week:
+            logger.error(f"Start week ({self.start_week}) cannot be greater than end week ({self.end_week})")
+            return False
+            
+        return True
     
     def validate(self) -> bool:
         """Validate configuration settings.

@@ -27,8 +27,10 @@ from mcq_flashcards.core.config import (
     CACHE_DIR,
     RAW_DIR,
     ERROR_DIR,
+    QUESTIONS_PER_PROMPT,
     BASE_DELAY,
     MAX_PROMPT_LENGTH,
+    SCRIPT_DIR,
     logger,
 )
 from mcq_flashcards.core.client import OllamaClient
@@ -350,8 +352,8 @@ class FlashcardGenerator:
         
         # Dev Mode Handling
         if self.config.dev_mode:
-            # Use _dev subdirectory and append suffix
-            dev_dir = self.output_dir.parent / "_dev"
+            # Use _dev subdirectory in tests folder
+            dev_dir = SCRIPT_DIR / "tests" / "_dev"
             dev_dir.mkdir(parents=True, exist_ok=True)
             out_name = f"{self.subject}_W{week:02d}_MCQ{bloom_suffix}{diff_suffix}_dev.md"
             out_path = dev_dir / out_name
