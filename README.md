@@ -217,6 +217,10 @@ The test suite includes **101 comprehensive tests** covering:
 
 All tests run in < 2 seconds with no external dependencies required.
 
+## 🤝 Contributing
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
+
 ## 📝 Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
