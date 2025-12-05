@@ -27,3 +27,9 @@ _scripts.code-workspace
 .pytest_cache/
 htmlcov/
 .coverage
+
+# Dev & Benchmarks
+_dev/
+_benchmark_internal/
+tests/_dev/
+tests/_benchmark_internal/
