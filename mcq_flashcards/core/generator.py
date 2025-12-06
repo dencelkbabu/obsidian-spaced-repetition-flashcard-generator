@@ -198,9 +198,12 @@ class FlashcardGenerator:
                 with open(cache_path, "r", encoding="utf-8") as f:
                     with self.stats_lock:
                         self.stats.cache_hits += 1
+                    logger.debug(f"✅ Cache HIT for '{name}' ({cache_path.name})")
                     return json.load(f)
             except (json.JSONDecodeError, EOFError, FileNotFoundError) as e:
                 logger.warning(f"Cache read failed for {name}: {e}. Regenerating...")
+        else:
+            logger.debug(f"❌ Cache MISS for '{name}' - generating new content")
 
         # Construct Prompt
         prompt = self._construct_prompt(text)
@@ -214,10 +217,16 @@ class FlashcardGenerator:
         worker_state = {"delay": BASE_DELAY + random.uniform(0, 0.2), "retries": 0}
         
         # 1. Initial Generation
+        logger.debug(f"🧠 Calling LLM for '{name}' (prompt length: {len(prompt)} chars)")
+        start_time = time.time()
         response = self.client.generate(prompt, worker_state, system=system_prompt)
+        api_time = time.time() - start_time
+        
         if not response or 'response' not in response:
+            logger.error(f"❌ LLM call failed for '{name}' (no response after {api_time:.1f}s)")
             return None
-
+        
+        logger.debug(f"✅ LLM responded for '{name}' in {api_time:.1f}s (response length: {len(response.get('response', ''))} chars)")
         self._save_raw_log(name, response, "_raw")
         cleaned_text = self.cleaner.clean_ai_output(response['response'])
 
@@ -251,6 +260,7 @@ class FlashcardGenerator:
                 json.dump(cleaned_text, f, ensure_ascii=False)
             # Atomic move (POSIX atomic, Windows near-atomic)
             os.replace(temp_path, cache_path)
+            logger.debug(f"💾 Cached result for '{name}' ({cache_path.name})")
         except Exception as e:
             # Clean up temp file on error
             try:
@@ -297,6 +307,7 @@ class FlashcardGenerator:
         except Exception as e:
             with self.stats_lock:
                 self.stats.failed_cards += 1
+            logger.error(f"❌ Failed to process '{name}': {str(e)}")
             self._save_error_log(name, str(e), traceback.format_exc())
             return None
 
@@ -368,9 +379,9 @@ class FlashcardGenerator:
             
             # Interactive Overwrite Check (Prod only)
             if out_path.exists():
-                print(f"\n⚠️  {out_name} exists.")
+                logger.warning(f"⚠️  {out_name} exists.")
                 if input("   Overwrite? (y/n): ").lower() != 'y':
-                    print("   Skipping...")
+                    logger.info("   Skipping...")
                     return
 
         # Write Header
@@ -384,7 +395,7 @@ class FlashcardGenerator:
         lecture_jobs = []
         concepts_set = set()
         
-        print(f"\n📝 Extracting content for Week {week}...")
+        logger.info(f"📝 Extracting content for Week {week}...")
         
         # Parallel file reading for better I/O performance
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -397,6 +408,7 @@ class FlashcardGenerator:
                     concepts_set.update(links)
                     if summary:
                         lecture_jobs.append((summary, p.name, False))
+                        logger.debug(f"📄 Extracted from '{p.name}' ({len(summary)} chars, {len(links)} concepts)")
                 except Exception as e:
                     logger.warning(f"Failed to extract from {p.name}: {e}")
 
@@ -417,7 +429,7 @@ class FlashcardGenerator:
 
         # Execute
         all_jobs = lecture_jobs + concept_jobs
-        print(f"🚀 Processing {len(all_jobs)} items with {self.config.workers} workers...")
+        logger.info(f"🚀 Processing {len(all_jobs)} items with {self.config.workers} workers...")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.workers) as executor:
             futures = {executor.submit(self.process_item, job): job for job in all_jobs}
@@ -451,14 +463,14 @@ class FlashcardGenerator:
 
         # Final Report for Week
         self.stats.end_time = time.time()
-        print(f"🎉 DONE! Output: {out_name}")
-        print(f"📊 Statistics for Week {week}:")
-        print(f"   Files: {self.stats.processed_files}/{self.stats.total_files}")
-        print(f"   Concepts: {self.stats.processed_concepts}/{self.stats.total_concepts}")
-        print(f"   Success: {self.stats.successful_cards} | Failed: {self.stats.failed_cards}")
-        print(f"   Cache Hits: {self.stats.cache_hits}")
-        print(f"   Self-Corrections: {self.stats.refine_success}/{self.stats.refine_attempts}")
-        print(f"   ⏱️  Time: {self.stats.duration:.1f}s ({self.stats.questions_per_minute:.1f} Q/min)")
+        logger.info(f"🎉 DONE! Output: {out_name}")
+        logger.info(f"📊 Statistics for Week {week}:")
+        logger.info(f"   Files: {self.stats.processed_files}/{self.stats.total_files}")
+        logger.info(f"   Concepts: {self.stats.processed_concepts}/{self.stats.total_concepts}")
+        logger.info(f"   Success: {self.stats.successful_cards} | Failed: {self.stats.failed_cards}")
+        logger.info(f"   Cache Hits: {self.stats.cache_hits}")
+        logger.info(f"   Self-Corrections: {self.stats.refine_success}/{self.stats.refine_attempts}")
+        logger.info(f"   ⏱️  Time: {self.stats.duration:.1f}s ({self.stats.questions_per_minute:.1f} Q/min)")
 
     def run(self, target_week: Optional[int], limit: int = 0):
         """Run the flashcard generation process.
@@ -468,14 +480,14 @@ class FlashcardGenerator:
             limit: Limit on concepts per week (0 = no limit)
         """
         if not self.client.check_connection():
-            print("❌ Ollama not reachable. Start with 'ollama serve'.")
+            logger.error("❌ Ollama not reachable. Start with 'ollama serve'.")
             return
 
         # 1. Scan and Group Files by Week
         week_files: Dict[int, List[Path]] = {}
         target_dirs = [self.subject_path / d for d in ["Recorded Lectures", "Live Lectures"] if (self.subject_path / d).exists()]
         
-        print(f"\n🔍 Scanning {self.subject}...")
+        logger.info(f"🔍 Scanning {self.subject}...")
         for d in target_dirs:
             for p in d.rglob("*.md"):
                 match = re.search(r'(?:W|Week)\s?0?(\d+)', p.name, re.IGNORECASE)
@@ -495,13 +507,13 @@ class FlashcardGenerator:
                     week_files[wk].append(p)
 
         if not week_files:
-            print("❌ No files found.")
+            logger.error("❌ No files found.")
             return
 
         # 2. Process Each Week
         sorted_weeks = sorted(week_files.keys())
-        print(f"📅 Found weeks: {', '.join(map(str, sorted_weeks))}")
-        print(f"   (AutoTuner Active: Monitoring GPU & Errors)")
+        logger.info(f"📅 Found weeks: {', '.join(map(str, sorted_weeks))}")
+        logger.info(f"   (AutoTuner Active: Monitoring GPU & Errors)")
         
         for wk in sorted_weeks:
             self.process_week(wk, week_files[wk], limit)

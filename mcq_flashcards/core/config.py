@@ -87,7 +87,11 @@ from logging.handlers import RotatingFileHandler
 
 LOG_DIR = SCRIPT_DIR / "_logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
-LOG_FILE = LOG_DIR / "flashcard_gen.log"
+
+# Create timestamped log filename (YYYYMMDD_HHMM format)
+from datetime import datetime
+timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+LOG_FILE = LOG_DIR / f"flashcard_gen_{timestamp}.log"
 
 def setup_logging(level=logging.INFO):
     """Configure logging with rotation.
@@ -125,7 +129,9 @@ def setup_logging(level=logging.INFO):
     
     return logging.getLogger("FlashcardGen")
 
-logger = setup_logging()
+import os
+level = logging.DEBUG if os.getenv('FLASHCARD_DEBUG') else logging.INFO
+logger = setup_logging(level=level)
 
 
 # --- DATA STRUCTURES ---

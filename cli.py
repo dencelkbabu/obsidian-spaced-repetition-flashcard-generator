@@ -379,6 +379,14 @@ def run_interactive() -> None:
 
 def run_dev(args: argparse.Namespace) -> None:
     """Run in development mode with CLI arguments."""
+    # Set debug logging if requested
+    if args.debug:
+        os.environ['FLASHCARD_DEBUG'] = '1'
+        # Reinitialize logger to pick up debug level
+        import logging
+        from mcq_flashcards.core.config import setup_logging
+        setup_logging(level=logging.DEBUG)
+    
     print(f"⚡ Flashcard Generator v{__version__} (Dev Mode)")
     
     if not check_ollama():
@@ -522,6 +530,7 @@ def main() -> None:
     # Optional flags
     parser.add_argument("-c", "--clear-cache", action="store_true", help="Clear cache before processing")
     parser.add_argument("--deep-clear", action="store_true", help="Only clear cache and exit (requires -d)")
+    parser.add_argument("--debug", action="store_true", help="Enable detailed DEBUG logging")
     parser.add_argument("--bloom", choices=BLOOM_LEVELS, help="Target Bloom's taxonomy level")
     parser.add_argument("--difficulty", choices=DIFFICULTY_LEVELS, help="Target difficulty level")
     parser.add_argument("-s", "--semester", help="Override semester (Dev mode)")

@@ -8,6 +8,8 @@ import re
 from pathlib import Path
 from typing import List, Tuple
 
+from mcq_flashcards.core.config import logger
+
 
 class FlashcardPostProcessor:
     """Post-processes generated flashcard files to fix formatting inconsistencies."""
@@ -200,14 +202,14 @@ def post_process_flashcards(output_dir: Path, verbose: bool = True) -> dict:
             }
             
             if verbose:
-                print(f"✓ {file_path.name}: {fixes} fixes applied")
+                logger.info(f"✓ {file_path.name}: {fixes} fixes applied")
                 for issue in issues[:3]:  # Show first 3 issues
-                    print(f"  - {issue}")
+                    logger.info(f"  - {issue}")
     
     if verbose:
-        print(f"\n📊 Post-Processing Summary:")
-        print(f"   Files processed: {stats['files_processed']}")
-        print(f"   Files with issues: {stats['files_with_issues']}")
-        print(f"   Total fixes applied: {stats['total_fixes']}")
+        logger.info(f"📊 Post-Processing Summary:")
+        logger.info(f"   Files processed: {stats['files_processed']}")
+        logger.info(f"   Files with issues: {stats['files_with_issues']}")
+        logger.info(f"   Total fixes applied: {stats['total_fixes']}")
     
     return stats
