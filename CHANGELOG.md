@@ -5,6 +5,144 @@ All notable changes to the Obsidian Spaced Repetition Flashcard Generator will b
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.30.0] - 2025-12-06
+
+### Summary
+MCQ volume reduction for better study manageability. Reduced from 5 to 3 MCQs per file.
+
+### Changed
+- Reduced `QUESTIONS_PER_PROMPT` from 5 to 3
+- Total MCQs: 930 → 558 (40% reduction)
+- Study time: 15 hours → 9 hours
+
+### Performance
+- ~5% faster generation (less LLM processing)
+- More manageable study volume
+
+## [3.29.0] - 2025-12-05
+
+### Added
+- Comprehensive logging system with DEBUG support
+- Timestamped log files (`flashcard_gen_YYYYMMDD_HHMM.log`)
+- `--debug` CLI flag for verbose logging
+- Environment variable support (`FLASHCARD_DEBUG`)
+- Detailed logging for:
+  - Cache operations (hits/misses)
+  - API calls (timing, token counts)
+  - File processing (characters, concepts)
+  - Worker activity tracking
+
+## [3.28.0] - 2025-12-05
+
+### Added
+- Parallel file reading for faster I/O
+- ThreadPoolExecutor for concurrent file operations
+- Improved startup time for large batches
+
+### Performance
+- Faster initial file processing
+- Maintains deterministic file order
+
+## [3.27.0] - 2025-12-04
+
+### Added
+- Smart cache invalidation for preset-based caching
+- Preset-based cache keys (bloom level + difficulty)
+- Automatic cache invalidation on preset change
+
+### Fixed
+- Prevents stale cached MCQs when changing presets
+- No manual cache clearing needed
+
+## [3.26.0] - 2025-12-03
+
+### Added
+- Enhanced progress indicators with real-time stats
+- Cache hit rate display
+- Questions per minute (QPM) tracking
+- Batch progress for multiple subjects
+- Live progress bars with tqdm
+
+### Changed
+- Improved visibility into generation process
+- Better completion statistics
+
+## [3.25.0] - 2025-12-02
+
+### Performance
+- **2.6x faster generation** - Major performance breakthrough
+- Increased `QUESTIONS_PER_PROMPT` from 2 to 5
+- Reduced API calls by 80%
+
+### Changed
+- Generate 5 MCQs per API call instead of 1
+- Same quality, significantly better efficiency
+
+### Benchmark
+```
+Before: 5 API calls for 5 MCQs
+After:  1 API call for 5 MCQs
+Speedup: 2.6x
+```
+
+## [3.24.0] - 2025-11-28
+
+### Added
+- Batch week processing support
+- Week ranges: `1-4`
+- Comma-separated weeks: `1,3,5`
+- Mixed format: `1-3,5,7-9`
+- `parse_week_argument()` helper function
+
+### Changed
+- Modified `execute_generation()` to accept week lists
+- Updated CLI help text with examples
+
+### Examples
+```bash
+python cli.py -d COMM1001 1-4      # Weeks 1-4
+python cli.py -d COMM1001 1,3,5    # Weeks 1,3,5
+python cli.py -d COMM1001 1-3,5    # Mixed
+```
+
+## [3.23.0] - 2025-11-25
+
+### Added
+- Comprehensive commit guidelines and template
+- `.github/commit_template.txt`
+- Commit message format standards
+- Semantic versioning rules
+
+### Documentation
+- Subject: lowercase, no period, <50 chars
+- Body: lowercase, use hyphens for bullets
+- Version: last line format
+
+## [3.22.0] - 2025-11-20
+
+### Added
+- Universal benchmark script for v2.6+
+- Performance comparison across versions
+- GPU utilization tracking
+- Questions per minute (QPM) metrics
+
+### Usage
+```bash
+python benchmark.py --subject COMM1001 --week 1
+```
+
+## [3.21.0] - 2025-11-18
+
+### Added
+- Comprehensive test suite improvements
+- Edge case testing
+- Concurrency tests
+- Bloom's level and difficulty validation tests
+
+### Changed
+- Expanded test coverage
+- Improved test organization
+
 ## [3.20.0] - 2025-12-05
 
 ### Summary

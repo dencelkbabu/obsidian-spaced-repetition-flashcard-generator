@@ -60,7 +60,7 @@ LATENCY_TARGET = 1.5
 
 # --- PROMPT SETTINGS ---
 MAX_PROMPT_LENGTH = 6000  # Maximum characters to include in LLM prompt
-QUESTIONS_PER_PROMPT = 5  # Number of MCQs to generate per API call (2.6x faster, quality maintained)
+QUESTIONS_PER_PROMPT = 3  # Reduced from 5 to 3 (558 total MCQs vs 930)
 
 # --- AUTOTUNER SETTINGS ---
 MAX_METRICS_HISTORY = 50  # Maximum number of latency/error samples to keep
