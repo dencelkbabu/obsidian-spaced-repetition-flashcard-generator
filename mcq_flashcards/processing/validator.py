@@ -96,3 +96,60 @@ class MCQValidator:
                 return None
         
         return None
+    
+    def validate_no_generic_options(self, text: str) -> bool:
+        """Check for generic 'Option N' placeholders in options.
+        
+        Args:
+            text: MCQ text to validate
+            
+        Returns:
+            True if no generic placeholders found, False otherwise
+        """
+        # Check for lines like "1. Option 1" or "2. Option 2"
+        if re.search(r'^\d+\.\s+Option \d+\s*$', text, re.MULTILINE):
+            return False
+        return True
+    
+    def validate_no_duplicate_options(self, text: str) -> bool:
+        """Check for duplicate option sets.
+        
+        Detects when options are listed twice in the same MCQ.
+        
+        Args:
+            text: MCQ text to validate
+            
+        Returns:
+            True if no duplicates found, False otherwise
+        """
+        lines = text.split('\n')
+        option_count = 0
+        
+        for line in lines:
+            if re.match(r'^\d+\.\s+', line):
+                option_count += 1
+                # If we see more than 4 options, we have duplicates
+                if option_count > 4:
+                    return False
+            elif '**Answer:**' in line:
+                # Reset for next question
+                option_count = 0
+        
+        return True
+    
+    def validate_answer_has_content(self, text: str) -> bool:
+        """Check that answer includes actual text, not 'Option N'.
+        
+        Args:
+            text: MCQ text to validate
+            
+        Returns:
+            True if answer has real content, False if generic
+        """
+        answer_match = re.search(r'\*\*Answer:\*\*\s*\d+\)\s+(.+)$', text, re.MULTILINE)
+        if answer_match:
+            answer_text = answer_match.group(1).strip()
+            # Check if answer is just "Option N"
+            if re.match(r'^Option \d+$', answer_text):
+                return False
+        return True
