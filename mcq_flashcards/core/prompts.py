@@ -54,20 +54,25 @@ STRICT FORMATTING RULES:
 1. Output MUST be in valid Markdown.
 2. Each question must follow this EXACT format:
 
- [Your question here]?
-1. Option 1
-2. Option 2
-3. Option 3
-4. Option 4
-?
-**Answer:** 2) Option 2 Text
-> **Explanation:** Short explanation of why this is the correct answer.
+What is the capital of France?
+1. London
+2. Paris
+3. Berlin
+4. Madrid  
+?  
+**Answer:** 2) Paris
+> **Explanation:** Paris is the capital and largest city of France.
 
-3. Do NOT include any conversational text (e.g., "Here are the questions").
-4. Ensure there is a blank line between questions.
-5. The separator '?' must be on its own line before the answer.
-6. The answer line must start with "**Answer:**".
-7. The explanation line must start with "> **Explanation:**".
+3. CRITICAL: Do NOT use generic placeholders like "Option 1", "Option 2", "Option 3", "Option 4".
+4. CRITICAL: Write ACTUAL option text with real content, not placeholders.
+5. CRITICAL: The answer MUST include the FULL TEXT of the correct option, not just "Option N".
+6. CRITICAL: Do NOT list options twice. Write them once only.
+7. Do NOT add question marks (?) to the end of option text.
+8. Do NOT include any conversational text (e.g., "Here are the questions").
+9. Ensure there is a blank line between questions.
+10. The separator '?' must be on its own line before the answer.
+11. The answer line must start with "**Answer:**".
+12. The explanation line must start with "> **Explanation:**".
 """
 
 # Refine Prompt Template

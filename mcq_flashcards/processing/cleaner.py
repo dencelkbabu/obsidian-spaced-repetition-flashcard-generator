@@ -83,6 +83,12 @@ class MCQCleaner:
         text = re.sub(r'(\*\*Answer:.*)\n\s*\n(> \*\*Explanation:)', r'\1\n\2', text)
         text = re.sub(r'\n{3,}', '\n\n', text)
         
+        # Remove duplicate option sets (keep first occurrence)
+        text = self._remove_duplicate_options(text)
+        
+        # Remove trailing ? from options
+        text = re.sub(r'^(\d+\.\s+.+?)\?\s*$', r'\1  ', text, flags=re.MULTILINE)
+        
         # Final whitespace check
         final_lines = []
         for line in text.split('\n'):
@@ -96,3 +102,51 @@ class MCQCleaner:
                 final_lines.append(line)
                 
         return '\n'.join(final_lines).strip()
+    
+    def _remove_duplicate_options(self, text: str) -> str:
+        """Remove duplicate option sets (keep first occurrence).
+        
+        Handles cases where LLM generates options twice, e.g.:
+        1. Real option A
+        2. Real option B
+        3. Real option C
+        4. Real option D
+        ?
+        1. Option 1  <-- duplicate, remove
+        2. Option 2  <-- duplicate, remove
+        3. Option 3  <-- duplicate, remove
+        4. Option 4  <-- duplicate, remove
+        ?
+        **Answer:** 2) Real option B
+        
+        Args:
+            text: Text potentially containing duplicate options
+            
+        Returns:
+            Text with duplicate options removed
+        """
+        lines = text.split('\n')
+        result = []
+        in_options = False
+        option_count = 0
+        
+        for line in lines:
+            # Only reset after Answer (not after separator)
+            if '**Answer:**' in line:
+                in_options = False
+                option_count = 0
+                result.append(line)
+            elif re.match(r'^\d+\.\s+', line):
+                if not in_options:
+                    in_options = True
+                    option_count = 1
+                    result.append(line)
+                elif option_count < 4:
+                    option_count += 1
+                    result.append(line)
+                # Skip duplicate options (option_count >= 4)
+            else:
+                # Don't reset on separator - keep counting
+                result.append(line)
+        
+        return '\n'.join(result)
