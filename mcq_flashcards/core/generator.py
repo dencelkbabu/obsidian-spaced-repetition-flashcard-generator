@@ -230,7 +230,20 @@ class FlashcardGenerator:
         self._save_raw_log(name, response, "_raw")
         cleaned_text = self.cleaner.clean_ai_output(response['response'])
 
-        # 2. Validation & Refine Pass
+        # 2. Format Error Validation
+        format_valid = (
+            self.validator.validate_no_generic_options(cleaned_text) and
+            self.validator.validate_no_duplicate_options(cleaned_text) and
+            self.validator.validate_answer_has_content(cleaned_text)
+        )
+        
+        if not format_valid:
+            logger.warning(f"⚠️  Format errors detected in '{name}' - generic options, duplicates, or generic answers")
+            # Don't cache invalid output - return None to skip
+            self._save_error_log(name, "Format Validation Failed", cleaned_text)
+            return None
+
+        # 3. Structure Validation & Refine Pass
         if not self.validator.validate(cleaned_text):
             with self.stats_lock:
                 self.stats.refine_attempts += 1
