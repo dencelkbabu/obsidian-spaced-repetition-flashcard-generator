@@ -55,7 +55,7 @@ class TestFlashcardGenerator(unittest.TestCase):
         """Test that accounting subject gets correct persona."""
         persona, focus = self.generator._get_persona()
         self.assertEqual(persona, "Strict Accounting Professor")
-        self.assertIn("IFRS/GAAP", focus)
+        self.assertIn("MANDATORY RULES", focus)  # Updated for new persona format
     
     def test_persona_selection_default(self):
         """Test default persona for unknown subject."""

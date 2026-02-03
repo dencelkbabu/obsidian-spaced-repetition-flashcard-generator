@@ -4,14 +4,54 @@ This module contains all the prompt templates, persona definitions,
 and instruction sets used by the FlashcardGenerator.
 """
 
-# Persona Definitions
+# Persona Definitions - Enhanced for Maximum Accuracy
 PERSONAS = {
-    "ACCT": ("Strict Accounting Professor", "Focus on precise accounting standards (IFRS/GAAP). Distinguish clearly between Bookkeeping and Accounting."),
-    "COMM": ("Communication Expert", "Focus on business etiquette, theory, and precise terminology."),
-    "MATH": ("Mathematics Professor", "Focus on logic, formulas, and absolute precision."),
-    "ECON": ("Economics Professor", "Focus on micro/macro theories and standard economic definitions."),
-    "DEFAULT": ("University Professor", "Focus on academic accuracy.")
+    "ACCT": ("Strict Accounting Professor", """MANDATORY RULES - FOLLOW EXACTLY:
+• Credit purchases: Dr. PURCHASES, Cr. SUNDRY CREDITORS (never Cash)
+• Cash purchases: Dr. PURCHASES, Cr. CASH
+• Personal Accounts: individuals, firms, companies (Ajeet & Co., XYZ Ltd)
+• Nominal Accounts: expenses, losses, incomes, gains (Rent, Salary, Interest)
+• Real Accounts: tangible/intangible assets (Cash, Furniture, Goodwill)
+• Accounting Equation: Assets = Liabilities + Equity (verify calculations)
+• Journal entries MUST balance: Total Debits = Total Credits"""),
+
+    "MATH": ("Mathematics Professor", """MANDATORY RULES - FOLLOW EXACTLY:
+• VERIFY all calculations before writing answer
+• Show step-by-step working in explanations
+• Profit = SP - CP, Loss = CP - SP
+• Percentage = (Part ÷ Whole) × 100
+• Ratio a:b means a parts to b parts
+• NEVER state a calculation without verifying it first"""),
+
+    "ECON": ("Economics Professor", """MANDATORY RULES - FOLLOW EXACTLY:
+• Demand↑ → Curve shifts RIGHT; Demand↓ → Curve shifts LEFT
+• Supply↑ → Curve shifts RIGHT; Supply↓ → Curve shifts LEFT
+• Price change = Movement ALONG curve (not shift)
+• Equilibrium: Qd = Qs at market clearing price
+• Marginal = Additional/Incremental change"""),
+
+    "COMM": ("Communication Expert", """MANDATORY RULES - FOLLOW EXACTLY:
+• 7 C's: Clear, Concise, Concrete, Correct, Coherent, Complete, Courteous
+• Process: Sender → Encode → Message → Channel → Decode → Receiver → Feedback
+• Verbal = spoken; Written = text; Non-verbal = body language
+• Barriers: Physical, Semantic, Psychological, Organizational"""),
+
+    "INFS": ("Information Systems Expert", """MANDATORY RULES - FOLLOW EXACTLY:
+• Ctrl+C = Copy, Ctrl+V = Paste, Ctrl+X = Cut, Ctrl+Z = Undo
+• WYSIWYG = What You See Is What You Get
+• Hardware = physical; Software = programs; Firmware = embedded
+• File extensions: .docx (Word), .xlsx (Excel), .pptx (PowerPoint)"""),
+
+    "MGMT": ("Management Professor", """MANDATORY RULES - FOLLOW EXACTLY:
+• Fayol = 14 Principles of Management
+• Taylor = Scientific Management (time-motion studies)
+• Mintzberg = 10 Managerial Roles (3 Interpersonal, 3 Informational, 4 Decisional)
+• P-O-L-C: Planning → Organizing → Leading → Controlling
+• Efficiency = doing things right; Effectiveness = doing right things"""),
+
+    "DEFAULT": ("University Professor", "Verify all facts. No assumptions. Academic precision required.")
 }
+
 
 # Bloom's Taxonomy Instructions
 BLOOM_INSTRUCTIONS = {
@@ -73,6 +113,13 @@ What is the capital of France?
 10. The separator '?' must be on its own line before the answer.
 11. The answer line must start with "**Answer:**".
 12. The explanation line must start with "> **Explanation:**".
+
+SELF-VERIFICATION (Check BEFORE outputting):
+1. Is the marked answer factually correct for this question?
+2. Are ALL calculations in the explanation mathematically accurate?
+3. Does the explanation match the selected answer option exactly?
+4. Are all technical terms used correctly per the MANDATORY RULES above?
+DO NOT OUTPUT if any verification fails - regenerate instead.
 """
 
 # Refine Prompt Template

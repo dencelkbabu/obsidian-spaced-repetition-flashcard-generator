@@ -36,6 +36,7 @@ from mcq_flashcards.core.config import (
 from mcq_flashcards.core.client import OllamaClient
 from mcq_flashcards.processing.cleaner import MCQCleaner
 from mcq_flashcards.processing.validator import MCQValidator
+from mcq_flashcards.processing.content_validator import get_validator
 from mcq_flashcards.core.prompts import (
     PERSONAS,
     BLOOM_INSTRUCTIONS,
@@ -72,6 +73,10 @@ class FlashcardGenerator:
         
         self.subject_path = self.class_root / self.subject
         self.persona, self.focus = self._get_persona()
+        
+        # Content validation for maximum accuracy
+        self.content_validator = get_validator(subject)
+        self.max_content_retries = 2  # Regenerate up to 2 times on content error
         
         # Cache concept file names for faster lookup
         self.concept_cache = {f.stem for f in CONCEPT_SOURCE.glob("*.md")} if CONCEPT_SOURCE.exists() else set()
@@ -265,6 +270,43 @@ class FlashcardGenerator:
                     return None
             else:
                 return None
+
+        # 4. Content Validation with Auto-Retry
+        if self.content_validator:
+            content_errors = self.content_validator.validate(cleaned_text)
+            if content_errors:
+                logger.warning(f"⚠️ Content errors in '{name}': {content_errors}")
+                
+                # Attempt regeneration with error feedback
+                for retry_attempt in range(self.max_content_retries):
+                    logger.info(f"   Regenerating (attempt {retry_attempt + 1}/{self.max_content_retries})...")
+                    
+                    # Add error feedback to prompt
+                    error_feedback = "\n\nPREVIOUS ERRORS TO AVOID:\n" + "\n".join(f"- {e}" for e in content_errors)
+                    retry_prompt = prompt + error_feedback
+                    
+                    retry_response = self.client.generate(retry_prompt, worker_state, system=system_prompt)
+                    if retry_response and 'response' in retry_response:
+                        cleaned_retry = self.cleaner.clean_ai_output(retry_response['response'])
+                        
+                        # Re-validate format
+                        if not self.validator.validate(cleaned_retry):
+                            continue
+                        
+                        # Re-validate content
+                        retry_errors = self.content_validator.validate(cleaned_retry)
+                        if not retry_errors:
+                            logger.info(f"   ✅ Content corrected on attempt {retry_attempt + 1}")
+                            cleaned_text = cleaned_retry
+                            content_errors = []
+                            break
+                        content_errors = retry_errors
+                
+                # If still has errors after retries, log and skip
+                if content_errors:
+                    self._save_error_log(name, "Content Validation Failed", "\n".join(content_errors))
+                    logger.warning(f"   ❌ Content errors persist after {self.max_content_retries} retries, skipping cache")
+                    return None
 
         # Save to Cache (atomic write to prevent corruption)
         temp_fd, temp_path = tempfile.mkstemp(dir=CACHE_DIR, suffix='.json', text=True)
