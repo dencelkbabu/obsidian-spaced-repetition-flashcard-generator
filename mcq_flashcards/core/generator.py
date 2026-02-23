@@ -31,6 +31,9 @@ from mcq_flashcards.core.config import (
     BASE_DELAY,
     MAX_PROMPT_LENGTH,
     SCRIPT_DIR,
+    SUBJECT_BUDGET,
+    MIN_PER_ITEM,
+    MAX_PER_ITEM,
     logger,
 )
 from mcq_flashcards.core.client import OllamaClient
@@ -163,12 +166,12 @@ class FlashcardGenerator:
         except Exception:
             pass
 
-    def _construct_prompt(self, context: str, num_questions: int = 5) -> str:
+    def _construct_prompt(self, context: str, num_questions: int = 3) -> str:
         """Construct the prompt for the LLM.
         
         Args:
             context: The text content to generate questions from
-            num_questions: Number of questions to generate
+            num_questions: Number of questions to generate (from budget system)
             
         Returns:
             Formatted prompt string
@@ -183,12 +186,13 @@ class FlashcardGenerator:
             difficulty_instruction=difficulty
         )
 
-    def generate_single(self, text: str, name: str) -> Optional[str]:
+    def generate_single(self, text: str, name: str, num_questions: int = 3) -> Optional[str]:
         """Generate MCQs for a single piece of text.
         
         Args:
             text: Source text to generate MCQs from
             name: Name for logging/caching
+            num_questions: Number of questions to generate (from budget)
             
         Returns:
             Generated MCQ text, or None if generation failed
@@ -210,8 +214,8 @@ class FlashcardGenerator:
         else:
             logger.debug(f"❌ Cache MISS for '{name}' - generating new content")
 
-        # Construct Prompt
-        prompt = self._construct_prompt(text)
+        # Construct Prompt with budget-allocated question count
+        prompt = self._construct_prompt(text, num_questions=num_questions)
         
         # Call LLM
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
@@ -330,21 +334,21 @@ class FlashcardGenerator:
         """Process a single item (lecture or concept).
         
         Args:
-            args: Tuple of (text, name, is_concept)
+            args: Tuple of (text, name, is_concept, num_questions)
             
         Returns:
             Formatted MCQ section, or None if processing failed
         """
-        text, name, is_concept = args
+        text, name, is_concept, num_questions = args
         if len(text) < 20:
             return None
 
         try:
-            result = self.generate_single(text, name)
+            result = self.generate_single(text, name, num_questions=num_questions)
             if result:
                 with self.stats_lock:
                     self.stats.successful_cards += 1
-                    self.stats.total_questions += QUESTIONS_PER_PROMPT
+                    self.stats.total_questions += num_questions
                     if is_concept:
                         self.stats.processed_concepts += 1
                     else:
@@ -482,8 +486,40 @@ class FlashcardGenerator:
                 if s:
                     concept_jobs.append((s, c, True))
 
-        # Execute
-        all_jobs = lecture_jobs + concept_jobs
+        # --- BUDGET ALLOCATION ---
+        total_items = len(lecture_jobs) + len(concept_jobs)
+        if total_items == 0:
+            logger.warning(f"No items found for Week {week}. Skipping.")
+            return
+        
+        week_budget = self._week_budgets.get(week, SUBJECT_BUDGET // 14)
+        qs_per_item = max(MIN_PER_ITEM, min(MAX_PER_ITEM, round(week_budget / total_items)))
+        
+        # If budget is tight, prioritise lectures over concepts
+        if qs_per_item * total_items > week_budget * 1.2:
+            # More items than budget allows — give lectures more
+            lecture_qs = min(MAX_PER_ITEM, max(MIN_PER_ITEM, round(week_budget * 0.4 / max(1, len(lecture_jobs)))))
+            remaining_budget = week_budget - (lecture_qs * len(lecture_jobs))
+            concept_qs = max(MIN_PER_ITEM, min(MAX_PER_ITEM, round(remaining_budget / max(1, len(concept_jobs)))))
+        else:
+            lecture_qs = qs_per_item
+            concept_qs = qs_per_item
+        
+        # Apply budgets to jobs (add num_questions as 4th tuple element)
+        budgeted_lecture_jobs = [(text, name, is_concept, lecture_qs) for text, name, is_concept in lecture_jobs]
+        budgeted_concept_jobs = [(text, name, is_concept, concept_qs) for text, name, is_concept in concept_jobs]
+        
+        # If total would still exceed budget, trim concept list
+        estimated_total = (len(budgeted_lecture_jobs) * lecture_qs) + (len(budgeted_concept_jobs) * concept_qs)
+        if estimated_total > week_budget * 1.3 and len(budgeted_concept_jobs) > 0:
+            max_concepts = max(1, (week_budget - len(budgeted_lecture_jobs) * lecture_qs) // concept_qs)
+            budgeted_concept_jobs = budgeted_concept_jobs[:max_concepts]
+            logger.info(f"📊 Budget cap: trimmed concepts to {max_concepts} (from {len(concept_jobs)})")
+        
+        all_jobs = budgeted_lecture_jobs + budgeted_concept_jobs
+        expected_qs = sum(nq for _, _, _, nq in all_jobs)
+        logger.info(f"📊 Budget: {week_budget} cards/week | {len(all_jobs)} items | ~{expected_qs} questions expected")
+        logger.info(f"   Lectures: {len(budgeted_lecture_jobs)} × {lecture_qs} Qs | Concepts: {len(budgeted_concept_jobs)} × {concept_qs} Qs")
         logger.info(f"🚀 Processing {len(all_jobs)} items with {self.config.workers} workers...")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.workers) as executor:
@@ -495,7 +531,7 @@ class FlashcardGenerator:
             for future in concurrent.futures.as_completed(futures):
                 result = future.result()
                 job = futures[future]
-                _, name, is_concept = job
+                _, name, is_concept, _ = job
                 
                 # Update progress bar description with current item
                 item_type = "Concept" if is_concept else "Lecture"
@@ -526,6 +562,28 @@ class FlashcardGenerator:
         logger.info(f"   Cache Hits: {self.stats.cache_hits}")
         logger.info(f"   Self-Corrections: {self.stats.refine_success}/{self.stats.refine_attempts}")
         logger.info(f"   ⏱️  Time: {self.stats.duration:.1f}s ({self.stats.questions_per_minute:.1f} Q/min)")
+
+    def _scan_week_items(self, files: List[Path]) -> int:
+        """Quick-scan a week's files to count total items (lectures + concepts).
+        
+        Returns:
+            Estimated total items (lectures + reachable concepts)
+        """
+        lecture_count = 0
+        concepts = set()
+        
+        for p in files:
+            try:
+                content = p.read_text(encoding='utf-8', errors='ignore')
+                links = re.findall(r'\[\[([^|#\]]+)(?:[|#][^\]]+)?\]\]', content)
+                for link in links:
+                    if link.strip() in self.concept_cache:
+                        concepts.add(link.strip())
+                lecture_count += 1
+            except Exception:
+                pass
+        
+        return lecture_count + len(concepts)
 
     def run(self, target_week: Optional[int], limit: int = 0):
         """Run the flashcard generation process.
@@ -565,10 +623,34 @@ class FlashcardGenerator:
             logger.error("❌ No files found.")
             return
 
-        # 2. Process Each Week
+        # 2. Budget Distribution: Pre-scan all weeks to allocate proportionally
         sorted_weeks = sorted(week_files.keys())
+        num_weeks = len(sorted_weeks)
+        
+        # Quick-scan to count items per week
+        week_item_counts = {}
+        for wk in sorted_weeks:
+            week_item_counts[wk] = self._scan_week_items(week_files[wk])
+        
+        total_items = sum(week_item_counts.values())
+        
+        # Distribute budget proportionally to item count
+        # Weeks with more content get more budget
+        self._week_budgets = {}
+        if total_items > 0:
+            for wk in sorted_weeks:
+                proportion = week_item_counts[wk] / total_items
+                self._week_budgets[wk] = max(5, round(SUBJECT_BUDGET * proportion))
+        else:
+            base = SUBJECT_BUDGET // max(1, num_weeks)
+            self._week_budgets = {wk: base for wk in sorted_weeks}
+        
         logger.info(f"📅 Found weeks: {', '.join(map(str, sorted_weeks))}")
+        logger.info(f"📊 Subject budget: {SUBJECT_BUDGET} cards across {num_weeks} weeks")
+        for wk in sorted_weeks:
+            logger.info(f"   W{wk:02d}: {week_item_counts.get(wk, 0)} items → {self._week_budgets[wk]} cards")
         logger.info(f"   (AutoTuner Active: Monitoring GPU & Errors)")
         
+        # 3. Process Each Week with its budget
         for wk in sorted_weeks:
             self.process_week(wk, week_files[wk], limit)

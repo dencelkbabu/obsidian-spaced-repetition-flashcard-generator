@@ -85,7 +85,7 @@ CONTEXT:
 {context}
 
 INSTRUCTIONS:
-Create {num_questions} multiple-choice questions based on the above context.
+Create EXACTLY {num_questions} multiple-choice questions based on the above context. No more, no fewer.
 
 {bloom_instruction}
 {difficulty_instruction}

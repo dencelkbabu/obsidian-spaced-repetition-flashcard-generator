@@ -60,7 +60,14 @@ LATENCY_TARGET = 1.5
 
 # --- PROMPT SETTINGS ---
 MAX_PROMPT_LENGTH = 6000  # Maximum characters to include in LLM prompt
-QUESTIONS_PER_PROMPT = 3  # Reduced from 5 to 3 (558 total MCQs vs 930)
+QUESTIONS_PER_PROMPT = 3  # Deprecated: only used for backwards compat in stats
+
+# --- BUDGET SETTINGS ---
+# Total cards to generate per subject (fits 1-week study @ 15 pomodoros/day)
+SUBJECT_BUDGET = 300
+MIN_PER_ITEM = 1   # Minimum questions per lecture/concept
+MAX_PER_ITEM = 5   # Maximum questions per lecture/concept
+SEMESTER_WEEKS = 14  # W01-W14
 
 # --- AUTOTUNER SETTINGS ---
 MAX_METRICS_HISTORY = 50  # Maximum number of latency/error samples to keep
@@ -145,7 +152,7 @@ class Config:
     top_p: float = 0.9
     max_tokens: int = 1500
     start_week: int = 1
-    end_week: int = 12
+    end_week: int = 14  # Full semester W01-W14
     semester: str = DEFAULT_SEMESTER
     dev_mode: bool = False
     bloom_level: Optional[str] = None  # Target Bloom's taxonomy level
