@@ -90,6 +90,7 @@ graph TB
 - **Responsibilities**:
   - Path configuration (VAULT_ROOT, CACHE_DIR, etc.)
   - Default settings (model, workers, retries)
+  - Budget settings (`SUBJECT_BUDGET`, `MIN_PER_ITEM`, `MAX_PER_ITEM`, `SEMESTER_WEEKS`)
   - Logging setup with rotation
   - Data structures (`Config`, `ProcessingStats`)
   - Input validation
@@ -112,12 +113,15 @@ graph TB
   - File discovery and processing
   - Wikilink extraction
   - Concept file caching
+  - **Budget allocation** — pre-scans weeks, distributes `SUBJECT_BUDGET` proportionally
+  - Per-item question count calculation (lectures prioritised over concepts)
+  - Concept trimming when budget is tight
   - Multi-threaded generation
   - Cache management (JSON)
   - Progress tracking
   - Performance metrics
 - **Key Classes**: `FlashcardGenerator`
-- **Key Methods**: `run()`, `process_week()`, `generate_single()`, `extract_summary()`
+- **Key Methods**: `run()`, `_scan_week_items()`, `process_week()`, `generate_single()`, `extract_summary()`
 
 #### `core/prompts.py`
 - **Purpose**: LLM prompt templates
@@ -202,28 +206,35 @@ sequenceDiagram
     
     CLI->>Generator: run(week, limit)
     Generator->>Generator: Discover files
+    Generator->>Generator: _scan_week_items() for all weeks
+    Generator->>Generator: Distribute SUBJECT_BUDGET proportionally
     
-    loop For each file
-        Generator->>Generator: extract_summary()
-        Generator->>Cache: Check cache (MD5 hash)
+    loop For each week (with allocated budget)
+        Generator->>Generator: extract_summary() per file
+        Generator->>Generator: Allocate per-item question count
+        Note over Generator: Lectures get priority; concepts trimmed if over budget
         
-        alt Cache hit
-            Cache-->>Generator: Return cached MCQ
-        else Cache miss
-            Generator->>Client: generate(prompt)
-            Client->>Ollama: POST /api/generate
-            Ollama-->>Client: Response
-            Client->>Client: AutoTuner throttle
-            Client-->>Generator: MCQ text
+        loop For each item (lecture/concept)
+            Generator->>Cache: Check cache (MD5 hash)
             
-            Generator->>Validator: validate(text)
-            
-            alt Valid
-                Generator->>Cache: Save to JSON
-            else Invalid
-                Generator->>Client: Refine prompt
+            alt Cache hit
+                Cache-->>Generator: Return cached MCQ
+            else Cache miss
+                Generator->>Client: generate(prompt, num_questions)
                 Client->>Ollama: POST /api/generate
-                Ollama-->>Client: Refined response
+                Ollama-->>Client: Response
+                Client->>Client: AutoTuner throttle
+                Client-->>Generator: MCQ text
+                
+                Generator->>Validator: validate(text)
+                
+                alt Valid
+                    Generator->>Cache: Save to JSON
+                else Invalid
+                    Generator->>Client: Refine prompt
+                    Client->>Ollama: POST /api/generate
+                    Ollama-->>Client: Refined response
+                end
             end
         end
     end
@@ -297,7 +308,7 @@ flowchart TD
 
 ```mermaid
 graph TB
-    subgraph "Test Suite (101 tests)"
+    subgraph "Test Suite (173 tests)"
         subgraph "Unit Tests (47)"
             U1[MCQCleaner: 15]
             U2[MCQValidator: 14]

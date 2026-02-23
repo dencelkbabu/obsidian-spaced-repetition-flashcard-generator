@@ -25,7 +25,8 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
 *   **✅ Strict Validation (v3.10.0):** Enhanced validator ensures exactly 4 options, valid answers, and explanations.
 *   **🔄 Self-Correction (v2.0):** Automatically detects invalid outputs and prompts the AI to fix them.
 *   **🧹 Auto-Cleanup (v2.7):** Post-processor fixes LLM output inconsistencies and verifies quality.
-*   **🧪 Comprehensive Testing (v3.20.0):** 105 automated tests ensure code quality and reliability.
+*   **📊 Budget System (v4.0.0):** Generates exactly ~300 cards per subject, distributed proportionally across W01-W14.
+*   **🧪 Comprehensive Testing (v3.20.0):** 173 automated tests ensure code quality and reliability.
 
 ### Developer Experience
 *   **📦 Modular Architecture (v2.7):** Clean package structure for better maintainability and extensibility.
@@ -40,7 +41,9 @@ This Python tool leverages local LLMs (via Ollama) to analyze your Obsidian vaul
     *   Default Model: `llama3.1:8b` (Configurable).
 3.  **Python 3.8+**: With the following dependencies:
 ```bash
-pip install requests pyyaml tqdm pytest
+pip install requests tqdm pytest
+# Optional (for benchmark memory tracking):
+pip install psutil
 ```
 
 ## 📂 Project Structure
@@ -50,7 +53,7 @@ _scripts/
 ├── mcq_flashcards.py          # Backwards-compatible entry point
 ├── cli.py                     # Main CLI interface
 ├── pytest.ini                 # Test configuration
-├── tests/                     # Test suite (125 tests)
+├── tests/                     # Test suite (173 tests)
 └── mcq_flashcards/            # Core package
     ├── core/                  # Core functionality
     │   ├── config.py          # Configuration & constants
@@ -95,6 +98,9 @@ VAULT_ROOT = Path(os.getenv("VAULT_ROOT", str(SCRIPT_DIR.parent)))  # v3.17.0: E
 You can also configure:
 *   `DEFAULT_MODEL`: The Ollama model to use (default: `llama3.1:8b`).
 *   `DEFAULT_WORKERS`: Number of threads for parallel processing.
+*   `SUBJECT_BUDGET`: Total cards to generate per subject (default: `300`).
+*   `MIN_PER_ITEM` / `MAX_PER_ITEM`: Min/max questions per lecture or concept (default: `1`/`5`).
+*   `SEMESTER_WEEKS`: Number of weeks in a semester (default: `14`).
 *   `CACHE_DIR`: Location for caching LLM responses (JSON format for security - v3.15.0).
 *   `VAULT_ROOT`: Override via environment variable for flexible deployment.
 
@@ -197,27 +203,7 @@ pytest --cov=mcq_flashcards --cov-report=html
 
 ### Test Coverage
 
-The test suite includes **105 comprehensive tests** covering:
-
-- **Unit Tests (47 tests)**
-  - MCQCleaner (15 tests) - Text cleaning and formatting
-  - MCQValidator (14 tests) - Format validation with strict checks
-  - AutoTuner (13 tests) - Performance optimization
-  - Cache Management (4 tests) - JSON cache operations
-  - Configuration (3 tests) - Input validation
-  - Logging (3 tests) - Log rotation and setup
-  - Metrics (3 tests) - Performance tracking
-
-- **Integration Tests (54 tests)**
-  - OllamaClient (9 tests) - API interaction and retries
-  - FlashcardGenerator (10 tests) - End-to-end generation
-  - PostProcessor (9 tests) - Output cleanup
-  - CLI (14 tests) - User interface and argument parsing
-  - Prompts (12 tests) - Template validation
-
-- **Robustness Tests (4 tests)**
-  - Concurrency (2 tests) - Thread safety and atomic writes
-  - Edge Cases (2 tests) - Large files and Unicode handling
+The test suite includes **173 comprehensive tests** covering unit, integration, and robustness tests across all modules.
 
 All tests run in < 2 seconds with no external dependencies required.
 
@@ -229,10 +215,10 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-**Latest:** v3.20.0 (2025-12-05) - Code Review Improvements
-- Enhanced reliability, performance, and maintainability
-- 101 tests passing
-- Improved security (JSON cache), logging, validation, and performance metrics
+**Latest:** v4.0.0 (2026-02-23) - Budget-Based Generation
+- Generates ~300 cards per subject (was ~1,500+), fitting a 1-week study schedule
+- 173 tests passing
+- See [CHANGELOG.md](CHANGELOG.md) for full version history
 
 ## Credits
 
