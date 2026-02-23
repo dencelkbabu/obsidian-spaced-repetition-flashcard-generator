@@ -5,6 +5,29 @@ All notable changes to the Obsidian Spaced Repetition Flashcard Generator will b
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-02-23
+
+### Summary
+**BREAKING:** Budget-based generation system. Generates ~300 cards/subject (was ~1,500+).
+Designed to fit a 1-week-per-subject study schedule with 15 Pomodoro sessions/day.
+
+### Changed
+- Replaced `QUESTIONS_PER_PROMPT` with budget system (`SUBJECT_BUDGET = 300`)
+- Budget distributed proportionally across weeks based on content density
+- Generator pre-scans all weeks to allocate per-item question counts
+- Concepts trimmed when budget is tight (lectures prioritised)
+- `end_week` default changed from 12 to 14 (full semester W01-W14)
+- Prompt now enforces "EXACTLY N questions, no more, no fewer"
+
+### Added
+- `SUBJECT_BUDGET`, `MIN_PER_ITEM`, `MAX_PER_ITEM`, `SEMESTER_WEEKS` config constants
+- `_scan_week_items()` method for budget pre-scanning
+- Per-item `num_questions` parameter through `process_item`/`generate_single`
+
+### Migration
+- Clear all cache: `python cli.py --clear-cache ALL`
+- Regenerate all flashcards
+
 ## [3.30.0] - 2025-12-06
 
 ### Summary

@@ -18,7 +18,7 @@ def test_validate_valid(mock_paths):
     mock_root.exists.return_value = True
     mock_paths.return_value = (mock_root, MagicMock())
     
-    config = Config(start_week=1, end_week=12, workers=4)
+    config = Config(start_week=1, end_week=14, workers=4)
     assert config.validate() is True
     
 @patch('mcq_flashcards.core.config.get_semester_paths')
